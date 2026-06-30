@@ -41,9 +41,13 @@ class Solitaire:
         for idx,key in enumerate(self.deck.keys()):
             self.deck[str(key)]['order_id'] = idx+1
         
-    def initiate_piles(self):
+    def initiate_tablaeu(self):
         # Create the empty piles as dictionaries
-        self.pile = {'1':{},'2':{},'3':{},'4':{}}
+        self.pile = {f"{str(stack_num)}":{} for stack_num in [1,2,3,4,5,6,7]}
+        
+    def initiate_foundation_piles(self):
+        # Create the empty stacks as dictionaries
+        self.stack = {f"{suit}":{} for suit in ['spades', 'clubs', 'diamonds', 'hearts']}
     
     def valid_placement(self, childCard: dict, parentCard: dict):
         '''
@@ -72,7 +76,16 @@ class Solitaire:
             valid = True
         return valid
     
-    def deck_to_pile(self, pileID1: str, cardID: str):
+    def stockpile_to_wastepile(self):
+        pass
+    
+    def tablaeu_to_foundation(self):
+        pass
+    
+    def stockpile_to_foundation(self):
+        pass
+    
+    def stockpile_to_tableau(self, pileID1: str, cardID: str):
         '''
         Function: Move a single card from the deck to a pile.
         
@@ -101,7 +114,7 @@ class Solitaire:
                     
         
     # Function must work if moving group of cards to new pile
-    def pile_to_pile(self, pileID1: str, pileID2: str, cardID: str):
+    def tableau_pile_to_tableau_pile(self, pileID1: str, pileID2: str, cardID: str):
         '''
         Function: Move cards between piles. 
         
