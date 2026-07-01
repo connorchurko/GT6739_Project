@@ -5,9 +5,9 @@ class Solitaire:
     # This class is a simulated game of Solitaire.
     
     def __init__(self):
-        self.deck = dict()
+        self.initiate_solitaire_board()
         
-    def generate_deck(self):
+    def generate_stockpile(self):
         '''
         Function: Generate Simulated Deck of Cards. 
 
@@ -15,14 +15,14 @@ class Solitaire:
             none
     
         Returns:
-            dictionary: deck[<Card Code>] = {rank, suit, value, order_id}
+            DataFrame: deck[<Card Code>] = {rank, suit, value, order_id}
                 ex. deck['as'] = {ace, spade, 1, 1} (ace of spades)
         '''
         
         # Initialize possible suits and ranks of cards
         self.suits = ['spades', 'clubs', 'diamonds', 'hearts']
         self.ranks = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13']
-        self.names = ['ace', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'jack', 'queen', 'king']
+        self.names = ['ace', '2', '3', '4', '5', '6', '7', '8', '9', 'ten', 'jack', 'queen', 'king']
         
         # Create the deck as a dictionary using double list comprehension
         self.deck = {
@@ -31,7 +31,8 @@ class Solitaire:
                 "name": name,
                 "suit": suit,
                 "color": 'red' if suit in ['diamonds','hearts'] else 'black',
-                "value": 10 if name in ['jack', 'queen', 'king'] else (1 if name == 'ace' else int(name))
+                "value": 10 if name in ['ten','jack', 'queen', 'king'] else (1 if name == 'ace' else int(name)),
+                "direction":"down"
             }
             for suit in self.suits
             for name in self.names
@@ -39,15 +40,29 @@ class Solitaire:
         
         # Initialize Order ID 
         for idx,key in enumerate(self.deck.keys()):
-            self.deck[str(key)]['order_id'] = idx+1
+            self.deck[str(key)]['stockID'] = str(idx+1)
+            self.deck[str(key)]['wasteID'] = '0'
+            self.deck[str(key)]['foundationID'] = '0'
+            self.deck[str(key)]['tablaeuID'] = '00'
+            
+        # Convert Dictionary to Dataframe
+        self.stockpile = pd.DataFrame(self.deck)
         
     def initiate_tablaeu(self):
-        # Create the empty piles as dictionaries
-        self.pile = {f"{str(stack_num)}":{} for stack_num in [1,2,3,4,5,6,7]}
+        # !!!! NEEDS TO BE FILLED WITH CARDS... SHOULD NOT BE EMPTY
+        tablaeu_pileIDs = [1,2,3,4,5,6,7]
+        self.tablaeu = {f"pileID{str(stack_num)}":{} for stack_num in tablaeu_pileIDs}
+        #scol = self.stockpile.columns[self.stockpile.loc['stockID'].between(1,28)].tolist()
+        
+        for pid in tablaeu_pileIDs:
+            scol = self.stockpile.columns[self.stockpile.loc['stockID']==str(pid)].tolist()[0]
+            self.tablaeu[f"pileID{str(pid)}"] = self.stockpile[scol]
+        
         
     def initiate_foundation_piles(self):
-        # Create the empty stacks as dictionaries
-        self.stack = {f"{suit}":{} for suit in ['spades', 'clubs', 'diamonds', 'hearts']}
+        # Create the empty stacks 
+        self.foundation_pile = {f"{suit}":{} for suit in ['spades', 'clubs', 'diamonds', 'hearts']}
+        self.foundation_pile = pd.DataFrame(self.foundation_pile)
     
     def valid_placement(self, childCard: dict, parentCard: dict):
         '''
@@ -70,9 +85,14 @@ class Solitaire:
         if (parentCard.color != childCard.color):
             suitCheck = True
             
+        # Check Card Face Direction
+        directionCheck = False
+        if (parentCard.direction != childCard.direction):
+            directionCheck = True
+            
         # Confirm Both Checks Pass
         valid = False
-        if (numCheck & suitCheck):
+        if (numCheck & suitCheck & directionCheck):
             valid = True
         return valid
     
@@ -98,17 +118,17 @@ class Solitaire:
         Returns:
             dictionary: 
         '''
-        order_id = len(self.pile[pileID1])+1 # determine order_id within pile
+        order_id = str(len(self.tableau[pileID1])+1) # determine order_id within pile
         
         valid = False
-        if len(self.pile[pileID1]>0):
-            valid = self.valid_placement(self.deck[cardID], self.pile[pileID1][order_id])
+        if len(self.tableau[pileID1]>0):
+            valid = self.valid_placement(self.stockpile[cardID], self.tableau[pileID1][order_id])
         else:
             valid = True
         
         if (valid):
-            self.pile[pileID1]={cardID:self.deck[cardID]} 
-            self.pile[pileID1][cardID]['order_id'] = order_id
+            self.tableau[pileID1]={cardID:self.stockpile[cardID]} 
+            self.tableau[pileID1][cardID]['stockID'] = order_id
         else:
             print('Card Unable to Move to Chosen Location')
                     
@@ -128,19 +148,19 @@ class Solitaire:
         Returns:
             dictionary: 
         '''
-        order_id = len(self.pile[pileID2])+1 # determine order_id within pile
-        self.pile[pileID2]=self.pile[pileID1]
-        self.pile[pileID2][cardID]['order_id'] = order_id
+        order_id = str(len(self.tableau[pileID2])+1) # determine order_id within pile
+        self.tableau[pileID2]=self.tableau[pileID1]
+        self.tableau[pileID2][cardID]['stockID'] = order_id
     
-    def shuffle_deck(self):
+    def shuffle_stockpile(self):
         '''
-        Function: Given a randomized set of integers from 0-51, reogranize the generated deck of cards.
+        Function: Given a randomized set of integers from 0-51, reogranize the generated stockpile of cards.
 
         Args:
             none
     
         Returns:
-            dictionary: deck[<Card Code>] = {rank, suit, value, order_id}
+            DataFrame: deck[<Card Code>] = {rank, suit, value, order_id}
                 ex. deck['as'] = {ace, spade, 1, n} (ace of spades)
         '''
         # Initialize the recommended NumPy random generator
@@ -150,7 +170,32 @@ class Solitaire:
         unique_array = rng.choice(np.arange(1, 53), size=52, replace=False)
         
         # Apply random order to deck
-        for idx,key in enumerate(self.deck.keys()):
-            self.deck[str(key)]['order_id'] = unique_array[idx]
+        for idx,key in enumerate(self.stockpile.keys()):
+            self.stockpile[str(key)]['stockID'] = unique_array[idx]
+            
+    def initiate_solitaire_board(self):
+        '''
+        Function: 
+            Run all initiating functions, set up solitaire board. To be called upon init.
+
+        Args:
+            none
+    
+        Returns:
+            none
+        '''
+        # Initiate Stockpile
+        self.generate_stockpile()
+        self.shuffle_stockpile()
+        
+        # Initiate Foundation piles
+        self.initiate_foundation_piles()
+        
+        # Initiate Tablaeu
+        self.initiate_tablaeu()
+        
+
+        
+        
         
     
