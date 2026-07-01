@@ -43,20 +43,62 @@ class Solitaire:
             self.deck[str(key)]['stockID'] = str(idx+1)
             self.deck[str(key)]['wasteID'] = '0'
             self.deck[str(key)]['foundationID'] = '0'
-            self.deck[str(key)]['tablaeuID'] = '00'
+            self.deck[str(key)]['tableauID'] = '00'
             
         # Convert Dictionary to Dataframe
-        self.stockpile = pd.DataFrame(self.deck)
+        self.deck = pd.DataFrame(self.deck)
         
-    def initiate_tablaeu(self):
-        # !!!! NEEDS TO BE FILLED WITH CARDS... SHOULD NOT BE EMPTY
-        tablaeu_pileIDs = [1,2,3,4,5,6,7]
-        self.tablaeu = {f"pileID{str(stack_num)}":{} for stack_num in tablaeu_pileIDs}
-        #scol = self.stockpile.columns[self.stockpile.loc['stockID'].between(1,28)].tolist()
+        # Create stockpile
+        sobj = pd.DataFrame(self.deck.loc['stockID'][self.deck.loc['stockID']!=0])
+        sorted_cards = sobj.sort_values(by='stockID').index.tolist()
+        self.stockpile = pd.DataFrame(sorted_cards,columns=['column1'])
         
-        for pid in tablaeu_pileIDs:
-            scol = self.stockpile.columns[self.stockpile.loc['stockID']==str(pid)].tolist()[0]
-            self.tablaeu[f"pileID{str(pid)}"] = self.stockpile[scol]
+    def initiate_tableau(self):
+           
+        self.tableau = {}
+        card_index = 1
+        
+        for pile in range(1, 8):    
+            self.tableau[f'column{pile}'] = {}
+        
+            for position in range(pile):
+                
+                card_name = self.deck.columns[self.deck.loc['stockID']==card_index].tolist()[0]
+                card_data = self.deck[card_name]
+        
+                # Copy the card so the original deck isn't modified
+                self.tableau[f'column{pile}'][card_name] = card_data.copy()
+        
+                # Last card in each pile is face up
+                if position == pile - 1:
+                    self.tableau[f'column{pile}'][card_name]['direction'] = 'up'
+                else:
+                    self.tableau[f'column{pile}'][card_name]['direction'] = 'down'
+        
+                card_index += 1
+                
+        # Initialize NaN DataFrame
+        tableau_df = pd.DataFrame(
+            np.nan,
+            index=range(13),
+            columns=[f'column{i}' for i in range(1, 8)]
+            )
+        
+        # Convert tableau dictionary to DataFrame
+        for col in self.tableau.keys():
+            idx = 0
+            for item in self.tableau[col]:
+                 tableau_df.loc[idx,col] = item
+                 self.deck[item].stockID = 0 # reset to zero, no longer in stockpile
+                 self.deck[item].tableauID = int(col[-1]+str(idx)) # update tableauID in stockpile
+                 idx += 1
+        
+        # Resave tableau into class attribute
+        self.tableau = tableau_df
+        
+        # Reset stockIDs in deck
+        self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
+
         
         
     def initiate_foundation_piles(self):
@@ -99,7 +141,7 @@ class Solitaire:
     def stockpile_to_wastepile(self):
         pass
     
-    def tablaeu_to_foundation(self):
+    def tableau_to_foundation(self):
         pass
     
     def stockpile_to_foundation(self):
@@ -191,8 +233,8 @@ class Solitaire:
         # Initiate Foundation piles
         self.initiate_foundation_piles()
         
-        # Initiate Tablaeu
-        self.initiate_tablaeu()
+        # Initiate tableau
+        self.initiate_tableau()
         
 
         
