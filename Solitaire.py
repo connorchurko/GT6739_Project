@@ -7,7 +7,7 @@ class Solitaire:
     def __init__(self):
         self.initiate_solitaire_board()
         
-    def generate_stockpile(self):
+    def generate_deck(self):
         '''
         Function: Generate Simulated Deck of Cards. 
 
@@ -42,7 +42,7 @@ class Solitaire:
         for idx,key in enumerate(self.deck.keys()):
             self.deck[str(key)]['stockID'] = str(idx+1)
             self.deck[str(key)]['wasteID'] = '0'
-            self.deck[str(key)]['foundationID'] = '0'
+            self.deck[str(key)]['foundationID'] = '00'
             self.deck[str(key)]['tableauID'] = '00'
             
         # Convert Dictionary to Dataframe
@@ -98,6 +98,8 @@ class Solitaire:
         
         # Reset stockIDs in deck
         self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
+        
+        # Remove cards within tableau from stockpile
 
         
         
@@ -106,7 +108,7 @@ class Solitaire:
         self.foundation_pile = {f"{suit}":{} for suit in ['spades', 'clubs', 'diamonds', 'hearts']}
         self.foundation_pile = pd.DataFrame(self.foundation_pile)
     
-    def valid_placement(self, childCard: dict, parentCard: dict):
+    def valid_placement(self, childCard: dict, parentCard: dict, move_type: str):
         '''
         Function: Checks if the card's rank and suit will allow placement.
         
@@ -227,14 +229,17 @@ class Solitaire:
             none
         '''
         # Initiate Stockpile
-        self.generate_stockpile()
-        self.shuffle_stockpile()
+        self.generate_deck()
+        self.shuffle_deck()
         
         # Initiate Foundation piles
         self.initiate_foundation_piles()
         
+        # Inititate Wastepile
+        self.wastepile()
+        
         # Initiate tableau
-        self.initiate_tableau()
+        #self.initiate_tableau()
         
 
         
