@@ -53,138 +53,7 @@ class Solitaire:
         sorted_cards = sobj.sort_values(by='stockID').index.tolist()
         self.stockpile = pd.DataFrame(sorted_cards,columns=['column1'])
         
-    def initiate_tableau(self):
-           
-        tableau = {}
-        card_index = 1
         
-        for pile in range(1, 8):    
-            tableau[f'column{pile}'] = {}
-        
-            for position in range(pile):
-                
-                card_name = self.deck.columns[self.deck.loc['stockID']==card_index].tolist()[0]
-                card_data = self.deck[card_name]
-        
-                # Copy the card so the original deck isn't modified
-                tableau[f'column{pile}'][card_name] = card_data.copy()
-        
-                # Last card in each pile is face up
-                if position == pile - 1:
-                    tableau[f'column{pile}'][card_name]['direction'] = 'up'
-                else:
-                    tableau[f'column{pile}'][card_name]['direction'] = 'down'
-        
-                card_index += 1
-                
-        # Initialize NaN DataFrame
-        tableau_df = pd.DataFrame(
-            np.nan,
-            index=range(13),
-            columns=[f'column{i}' for i in range(1, 8)]
-            )
-        
-        # Convert tableau dictionary to DataFrame
-        for col in tableau.keys():
-            idx = 0
-            for item in tableau[col]:
-                 tableau_df.loc[idx,col] = item
-                 self.deck[item].stockID = 0 # reset to zero, no longer in stockpile
-                 self.deck[item].tableauID = int(col[-1]+str(idx)) # update tableauID in stockpile
-                 idx += 1
-        
-        # Reset stockIDs in deck
-        self.deck.loc['stockID'][self.deck.loc['stockID']!=0] = self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
-
-    
-    def valid_placement(self, childCard: dict, parentCard: dict, move_type: str):
-        '''
-        Function: Checks if the card's rank and suit will allow placement.
-        
-        Args:
-            childCard: Dictionary expression of child card (moving card).
-            parentCard: Dictionary expression of parent card (stationary/capturing card).
-    
-        Returns:
-            bool: 
-        '''
-        '''# Check Number Differences
-        numCheck = False
-        if (parentCard.rank - childCard.rank == 1):
-            numCheck = True
-        
-        # Check Suit Differences
-        suitCheck = False
-        if (parentCard.color != childCard.color):
-            suitCheck = True
-            
-        # Check Card Face Direction
-        directionCheck = False
-        if (parentCard.direction != childCard.direction):
-            directionCheck = True
-            
-        # Confirm Both Checks Pass
-        valid = False
-        if (numCheck & suitCheck & directionCheck):
-            valid = True
-        return valid'''
-    
-    def stockpile_to_wastepile(self):
-        pass
-    
-    def tableau_to_foundation(self):
-        pass
-    
-    def stockpile_to_foundation(self):
-        pass
-    
-    def stockpile_to_tableau(self, pileID1: str, cardID: str):
-        '''
-        Function: Move a single card from the deck to a pile.
-        
-        !!!!!!MUST HAVE A CHECK TO CONFIRM THAT THE CARD CAN BE MOVED!!!!
-
-        Args:
-            pileID1: To Be OrderID of card within pile 
-            cardID:  Card ID (qh = queen of hearts) 
-    
-        Returns:
-            dictionary: 
-        '''
-        '''order_id = str(len(self.tableau[pileID1])+1) # determine order_id within pile
-        
-        valid = False
-        if len(self.tableau[pileID1]>0):
-            valid = self.valid_placement(self.stockpile[cardID], self.tableau[pileID1][order_id])
-        else:
-            valid = True
-        
-        if (valid):
-            self.tableau[pileID1]={cardID:self.stockpile[cardID]} 
-            self.tableau[pileID1][cardID]['stockID'] = order_id
-        else:
-            print('Card Unable to Move to Chosen Location')'''
-                    
-        
-    # Function must work if moving group of cards to new pile
-    def tableau_pile_to_tableau_pile(self, pileID1: str, pileID2: str, cardID: str):
-        '''
-        Function: Move cards between piles. 
-        
-        !!!!!!MUST BE CONFIGURED TO MOVE GROUP OF CARDS BETWEEN PILES AND UPDATE ORDER ID!!!!!!!
-
-        Args:
-            pileID1: OrderID of card within start pile 
-            pileID2: To Be OrderID of card within end pile 
-            cardID:  Card ID (qh = queen of hearts)
-    
-        Returns:
-            dictionary: 
-        '''
-        '''order_id = str(len(self.tableau[pileID2])+1) # determine order_id within pile
-        self.tableau[pileID2]=self.tableau[pileID1]
-        self.tableau[pileID2][cardID]['stockID'] = order_id'''
-    
     def shuffle_deck(self):
         '''
         Function: Given a randomized set of integers from 0-51, reogranize the generated stockpile of cards.
@@ -204,6 +73,29 @@ class Solitaire:
         
         # Apply random order to deck
         self.deck.loc['stockID'] = unique_array
+        
+        
+    def initiate_tableau(self):
+        card_index = 1
+        
+        for pile in range(1, 8):    
+            for position in range(pile):
+                card_name = self.deck.columns[self.deck.loc['stockID']==card_index].tolist()[0]
+                
+                self.deck[card_name].stockID = 0 # reset to zero, no longer in stockpile
+                self.deck[card_name].tableauID = str(pile)+str(position) # update tableauID in stockpile
+        
+                # Last card in each pile is face up
+                if position == pile - 1:
+                    self.deck[card_name].direction = 'up'
+                else:
+                    self.deck[card_name].direction = 'down'
+        
+                card_index += 1
+        
+        # Reset stockIDs in deck
+        self.deck.loc['stockID'][self.deck.loc['stockID']!=0] = self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
+
             
     def initiate_solitaire_board(self):
         '''
