@@ -55,11 +55,11 @@ class Solitaire:
         
     def initiate_tableau(self):
            
-        self.tableau = {}
+        tableau = {}
         card_index = 1
         
         for pile in range(1, 8):    
-            self.tableau[f'column{pile}'] = {}
+            tableau[f'column{pile}'] = {}
         
             for position in range(pile):
                 
@@ -67,13 +67,13 @@ class Solitaire:
                 card_data = self.deck[card_name]
         
                 # Copy the card so the original deck isn't modified
-                self.tableau[f'column{pile}'][card_name] = card_data.copy()
+                tableau[f'column{pile}'][card_name] = card_data.copy()
         
                 # Last card in each pile is face up
                 if position == pile - 1:
-                    self.tableau[f'column{pile}'][card_name]['direction'] = 'up'
+                    tableau[f'column{pile}'][card_name]['direction'] = 'up'
                 else:
-                    self.tableau[f'column{pile}'][card_name]['direction'] = 'down'
+                    tableau[f'column{pile}'][card_name]['direction'] = 'down'
         
                 card_index += 1
                 
@@ -85,28 +85,17 @@ class Solitaire:
             )
         
         # Convert tableau dictionary to DataFrame
-        for col in self.tableau.keys():
+        for col in tableau.keys():
             idx = 0
-            for item in self.tableau[col]:
+            for item in tableau[col]:
                  tableau_df.loc[idx,col] = item
                  self.deck[item].stockID = 0 # reset to zero, no longer in stockpile
                  self.deck[item].tableauID = int(col[-1]+str(idx)) # update tableauID in stockpile
                  idx += 1
         
-        # Resave tableau into class attribute
-        self.tableau = tableau_df
-        
         # Reset stockIDs in deck
-        self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
-        
-        # Remove cards within tableau from stockpile
+        self.deck.loc['stockID'][self.deck.loc['stockID']!=0] = self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
 
-        
-        
-    def initiate_foundation_piles(self):
-        # Create the empty stacks 
-        self.foundation_pile = {f"{suit}":{} for suit in ['spades', 'clubs', 'diamonds', 'hearts']}
-        self.foundation_pile = pd.DataFrame(self.foundation_pile)
     
     def valid_placement(self, childCard: dict, parentCard: dict, move_type: str):
         '''
@@ -119,7 +108,7 @@ class Solitaire:
         Returns:
             bool: 
         '''
-        # Check Number Differences
+        '''# Check Number Differences
         numCheck = False
         if (parentCard.rank - childCard.rank == 1):
             numCheck = True
@@ -138,7 +127,7 @@ class Solitaire:
         valid = False
         if (numCheck & suitCheck & directionCheck):
             valid = True
-        return valid
+        return valid'''
     
     def stockpile_to_wastepile(self):
         pass
@@ -162,7 +151,7 @@ class Solitaire:
         Returns:
             dictionary: 
         '''
-        order_id = str(len(self.tableau[pileID1])+1) # determine order_id within pile
+        '''order_id = str(len(self.tableau[pileID1])+1) # determine order_id within pile
         
         valid = False
         if len(self.tableau[pileID1]>0):
@@ -174,7 +163,7 @@ class Solitaire:
             self.tableau[pileID1]={cardID:self.stockpile[cardID]} 
             self.tableau[pileID1][cardID]['stockID'] = order_id
         else:
-            print('Card Unable to Move to Chosen Location')
+            print('Card Unable to Move to Chosen Location')'''
                     
         
     # Function must work if moving group of cards to new pile
@@ -192,11 +181,11 @@ class Solitaire:
         Returns:
             dictionary: 
         '''
-        order_id = str(len(self.tableau[pileID2])+1) # determine order_id within pile
+        '''order_id = str(len(self.tableau[pileID2])+1) # determine order_id within pile
         self.tableau[pileID2]=self.tableau[pileID1]
-        self.tableau[pileID2][cardID]['stockID'] = order_id
+        self.tableau[pileID2][cardID]['stockID'] = order_id'''
     
-    def shuffle_stockpile(self):
+    def shuffle_deck(self):
         '''
         Function: Given a randomized set of integers from 0-51, reogranize the generated stockpile of cards.
 
@@ -214,8 +203,7 @@ class Solitaire:
         unique_array = rng.choice(np.arange(1, 53), size=52, replace=False)
         
         # Apply random order to deck
-        for idx,key in enumerate(self.stockpile.keys()):
-            self.stockpile[str(key)]['stockID'] = unique_array[idx]
+        self.deck.loc['stockID'] = unique_array
             
     def initiate_solitaire_board(self):
         '''
@@ -232,14 +220,13 @@ class Solitaire:
         self.generate_deck()
         self.shuffle_deck()
         
-        # Initiate Foundation piles
-        self.initiate_foundation_piles()
-        
-        # Inititate Wastepile
-        self.wastepile()
-        
         # Initiate tableau
-        #self.initiate_tableau()
+        self.initiate_tableau()
+        
+
+# Direct code execution
+if __name__ == "__main__":
+    S = Solitaire()
         
 
         
