@@ -100,7 +100,10 @@ class Solitaire:
         self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
         
         # Remove cards within tableau from stockpile
-
+        #for col_name,col_data in self.tableau.items():
+            #for cid in col_data:
+                #if(cid.isin(self.stockpile)):
+                    # use df.dop to remove tableau items.
         
         
     def initiate_foundation_piles(self):
@@ -154,11 +157,11 @@ class Solitaire:
         Function: Move a single card from the deck to a pile.
         
         !!!!!!MUST HAVE A CHECK TO CONFIRM THAT THE CARD CAN BE MOVED!!!!
-
+        
         Args:
             pileID1: To Be OrderID of card within pile 
             cardID:  Card ID (qh = queen of hearts) 
-    
+        
         Returns:
             dictionary: 
         '''
@@ -195,8 +198,11 @@ class Solitaire:
         order_id = str(len(self.tableau[pileID2])+1) # determine order_id within pile
         self.tableau[pileID2]=self.tableau[pileID1]
         self.tableau[pileID2][cardID]['stockID'] = order_id
+        
+    def initiate_wastepile(self):
+        pass
     
-    def shuffle_stockpile(self):
+    def shuffle_deck(self):
         '''
         Function: Given a randomized set of integers from 0-51, reogranize the generated stockpile of cards.
 
@@ -214,8 +220,10 @@ class Solitaire:
         unique_array = rng.choice(np.arange(1, 53), size=52, replace=False)
         
         # Apply random order to deck
-        for idx,key in enumerate(self.stockpile.keys()):
-            self.stockpile[str(key)]['stockID'] = unique_array[idx]
+        for idx,key in enumerate(self.deck.keys()):
+            self.deck[str(key)]['stockID'] = unique_array[idx]
+            
+        self.stockpile['column1'] = self.deck.loc['stockID'].sort_values().keys().tolist()    
             
     def initiate_solitaire_board(self):
         '''
@@ -236,10 +244,10 @@ class Solitaire:
         self.initiate_foundation_piles()
         
         # Inititate Wastepile
-        self.wastepile()
+        self.initiate_wastepile()
         
         # Initiate tableau
-        #self.initiate_tableau()
+        self.initiate_tableau()
         
 
         
