@@ -108,7 +108,7 @@ class Solitaire:
         Returns:
             bool: 
         '''
-        '''# Check Number Differences
+        # Check Number Differences
         numCheck = False
         if (parentCard.rank - childCard.rank == 1):
             numCheck = True
@@ -127,7 +127,7 @@ class Solitaire:
         valid = False
         if (numCheck & suitCheck & directionCheck):
             valid = True
-        return valid'''
+        return valid
     
     def stockpile_to_wastepile(self):
         pass
@@ -151,7 +151,7 @@ class Solitaire:
         Returns:
             dictionary: 
         '''
-        '''order_id = str(len(self.tableau[pileID1])+1) # determine order_id within pile
+        order_id = str(len(self.tableau[pileID1])+1) # determine order_id within pile
         
         valid = False
         if len(self.tableau[pileID1]>0):
@@ -163,7 +163,7 @@ class Solitaire:
             self.tableau[pileID1]={cardID:self.stockpile[cardID]} 
             self.tableau[pileID1][cardID]['stockID'] = order_id
         else:
-            print('Card Unable to Move to Chosen Location')'''
+            print('Card Unable to Move to Chosen Location')
                     
         
     # Function must work if moving group of cards to new pile
@@ -181,9 +181,9 @@ class Solitaire:
         Returns:
             dictionary: 
         '''
-        '''order_id = str(len(self.tableau[pileID2])+1) # determine order_id within pile
+        order_id = str(len(self.tableau[pileID2])+1) # determine order_id within pile
         self.tableau[pileID2]=self.tableau[pileID1]
-        self.tableau[pileID2][cardID]['stockID'] = order_id'''
+        self.tableau[pileID2][cardID]['stockID'] = order_id
     
     def shuffle_deck(self):
         '''
