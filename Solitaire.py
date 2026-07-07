@@ -6,6 +6,7 @@ class Solitaire:
     
     def __init__(self):
         self.initiate_solitaire_board()
+        self.strategy = 'greedy'
         
     def generate_deck(self):
         '''
@@ -40,8 +41,8 @@ class Solitaire:
         
         # Initialize Order ID 
         for idx,key in enumerate(self.deck.keys()):
-            self.deck[str(key)]['stockID'] = str(idx+1)
-            self.deck[str(key)]['wasteID'] = '0'
+            self.deck[str(key)]['stockID'] = idx+1
+            self.deck[str(key)]['wasteID'] = 0
             self.deck[str(key)]['foundationID'] = '00'
             self.deck[str(key)]['tableauID'] = '00'
             
@@ -92,13 +93,19 @@ class Solitaire:
                 card_index += 1
         
         # Reset stockIDs in deck
-        self.reset_stockpile()
+        self.deck.loc['stockID'][self.deck.loc['stockID']!=0] = self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
+        self.deck.loc['direction'][self.deck.loc['stockID']==self.deck.loc['stockID'].max()] = 'up'  
 
         
     def top_stockpile(self):
-        cardID = self.deck.keys()[self.deck.loc['stockID'] == self.deck.loc['stockID'].max()][0]
-        print(f"The top of the stockpile is {cardID}")
-        return cardID
+        stock = self.deck[self.deck.keys()[self.deck.loc['stockID']!=0]]
+        if len(stock.keys())==0:
+            print("Stockpile is empty. Needs reset.")
+            return 
+        else:  
+            cardID = self.deck.keys()[self.deck.loc['stockID'] == self.deck.loc['stockID'].max()][0]
+            print(f"The top of the stockpile is {cardID}")
+            return cardID
             
             
     def initiate_solitaire_board(self):
@@ -123,14 +130,30 @@ class Solitaire:
         self.top_stockpile()
         
     def reset_stockpile(self):
-        self.deck.loc['stockID'][self.deck.loc['stockID']!=0] = self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
-        self.deck.loc['direction'][self.deck.loc['stockID']==self.deck.loc['stockID'].max()] = 'up'     
+        # Move cards from wastepile to stockpile
+        #waste = self.deck[self.deck.keys()[self.deck.loc['wasteID']!=0]]
+        
+        # Set stockIDs based on wasteIDs
+        self.deck.loc['stockID'][self.deck.loc['wasteID']!=0] = abs(self.deck.loc['wasteID']-self.deck.loc['wasteID'].max())+1
+        self.deck.loc['direction'][self.deck.loc['stockID']==self.deck.loc['stockID'].max()] = 'up'  
+        
+        # Set WasteIDs to Zero
+        self.deck.loc['wasteID'] = 0
+        
+        print('Reseting stockpile from wastepile')
     
     def check_placement(self):
+        # Stockpile status
+        stock = self.deck[self.deck.keys()[self.deck.loc['stockID']!=0]]
+        if len(stock.keys())==0:
+            self.reset_stockpile()
+        
         # Determine top card
         cardID = self.deck.keys()[self.deck.loc['stockID'] == self.deck.loc['stockID'].max()][0]        
         card_data = self.deck[cardID]            
         
+        
+        ####### TABLEAU PLACEMENT #######
         # Find all cards in tableau 
         tab = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='00']]
         
@@ -144,20 +167,42 @@ class Solitaire:
         clr_cond = tab.loc['color']!=card_data['color']
         
         # Find available tableau card
-        open_card = tab[tab.keys()[rank_cond & dir_cond & clr_cond]]
+        tab_card = tab[tab.keys()[rank_cond & dir_cond & clr_cond]]
         
         # Confirm possible cards are at end of tableau
         endIDs = self.find_top_tab()
-        validIDs = [id for id in open_card.keys() if open_card[id]['tableauID'] in endIDs]
-        open_card = open_card[validIDs]
+        validIDs = [id for id in tab_card.keys() if tab_card[id]['tableauID'] in endIDs]
+        tab_card = tab_card[validIDs]
         
+        ####### FOUNDATION PLACEMENT #######
+        # Dependent on strategy. Baseline placing aces into foundation automatically.
+        # Must determine if card of rank-1 and same suit exists in foundation already.
+        goToFoundation = False
+        if card_data['name'] =='ace': # Aces auto foundation
+            goToFoundation = True
+        else: # if not ace, not foundation possibility
+            found = self.deck[self.deck.keys()[self.deck.loc['foundationID']!='00']]
+            # Step 1: Determine if rank-1 exists in foundation
+            rank_cond = found.loc['rank']==int(card_data['rank'])-1
+            
+            # Step 2: Determine if rank-1 card has the same suit
+            suit_cond = found.loc['suit']==card_data['suit']
+            
+            # Select foundation opening
+            found_card = found[found.keys()[rank_cond & suit_cond]]    
+                
+            if self.strategy == 'greedy' and len(found_card.keys())>0:
+                goToFoundation = True
+            elif self.strategy == 'other':
+                goToFoundation = True
+        
+        # NEED LOGIC IF BOTH ARE TRUE? PRIOTIZE BASED ON STRATEGY?
         out = {cardID:'waste'} # default to wastepile
-        if len(open_card.keys())>0:
+        if len(tab_card.keys())>0:
             out[cardID] = 'tableau' # set flag to tableau if card available
-        elif card_data['name'] =='ace':    
+        elif goToFoundation:    
             out[cardID] = 'foundation'
-        
-        print(out)
+            
         return out
     
     def player(self):
@@ -172,11 +217,11 @@ class Solitaire:
     
     def stockpile_to_wastepile(self,cardID: str):
         # Move top stockpile card to wastepile (update wasteID, make stockID = 0)
-        self.deck[cardID]['wasteID'] = str(int(self.deck.loc['wasteID'].max())+1)
+        self.deck[cardID]['wasteID'] = int(self.deck.loc['wasteID'].max())+1
         self.deck[cardID]['stockID'] = 0
         
         # Reset stockpile and flip
-        self.reset_stockpile
+        self.deck.loc['direction'][self.deck.loc['stockID']==self.deck.loc['stockID'].max()] = 'up'
         
         print(f"{cardID} moved to wastepile")
         self.top_stockpile()
@@ -187,7 +232,7 @@ class Solitaire:
         self.deck[cardID]['stockID'] = 0
         
         # Reset stockpile and flip
-        self.reset_stockpile
+        self.deck.loc['direction'][self.deck.loc['stockID']==self.deck.loc['stockID'].max()] = 'up'
         
         print(f"{cardID} moved to foundation")
         self.top_stockpile()
@@ -222,7 +267,6 @@ class Solitaire:
             dictionary: 
         '''
         card_data = self.deck[cardID]
-        print(cardID)
         
         # Find all cards in tableau 
         tab = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='00']]
@@ -252,7 +296,7 @@ class Solitaire:
         self.deck[cardID]['stockID'] = 0
         
         # Reset stockpile and flip
-        self.reset_stockpile
+        self.deck.loc['direction'][self.deck.loc['stockID']==self.deck.loc['stockID'].max()] = 'up'
         
         print(f"{cardID} placed onto {chosen_card.name} in tableau")
         self.top_stockpile()
@@ -300,8 +344,9 @@ class Solitaire:
 # Direct code execution
 if __name__ == "__main__":
     S = Solitaire()
-    S.player()
-        
+    S.player() # first move
+    #while len(S.deck.keys()[S.deck.loc['stockID']!=0])>0:
+        #S.player()
 
         
         
