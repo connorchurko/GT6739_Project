@@ -347,6 +347,8 @@ if __name__ == "__main__":
     S.player() # first move
     #while len(S.deck.keys()[S.deck.loc['stockID']!=0])>0:
         #S.player()
+    #for i in range(1,100):
+        #S.player()
 
         
         
