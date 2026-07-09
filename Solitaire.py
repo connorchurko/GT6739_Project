@@ -95,6 +95,23 @@ class Solitaire:
         # Reset stockIDs in deck
         self.deck.loc['stockID'][self.deck.loc['stockID']!=0] = self.deck.loc['stockID'][self.deck.loc['stockID']!=0]-28
         self.deck.loc['direction'][self.deck.loc['stockID']==self.deck.loc['stockID'].max()] = 'up'  
+        
+        # Initialize NaN DataFrame
+        self.tableau = pd.DataFrame(
+            np.nan,
+            index=range(13),
+            columns=[f'column{i}' for i in range(1, 8)]
+            )
+
+        # Create visual representation of tableau
+        tableau_df = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='00']]
+        for cid in tableau_df.keys():
+            tid = tableau_df[cid]['tableauID']
+            col = int(str(tid)[0])
+            row = int(str(tid)[1])
+            dir = tableau_df[cid]['direction']
+            self.tableau.iloc[row,col-1] = f'{cid}({dir[0]})'
+        print(self.tableau)
 
         
     def top_stockpile(self):
@@ -292,14 +309,22 @@ class Solitaire:
         chosen_card = open_card[open_card.keys()[0]]
         
         # Move top stockpile card to chosen card in tableau (update tableauID, make stockID = 0)
-        self.deck[cardID]['tableauID'] = int(chosen_card['tableauID'])+1
+        tid = int(chosen_card['tableauID'])+1
+        self.deck[cardID]['tableauID'] = tid
         self.deck[cardID]['stockID'] = 0
+        
+        # Update tableau visual
+        col = int(str(tid)[0])
+        row = int(str(tid)[1])
+        dir = self.deck[cardID]['direction']
+        self.tableau.iloc[row,col-1] = f'{cardID}({dir[0]})'
         
         # Reset stockpile and flip
         self.deck.loc['direction'][self.deck.loc['stockID']==self.deck.loc['stockID'].max()] = 'up'
         
         print(f"{cardID} placed onto {chosen_card.name} in tableau")
         self.top_stockpile()
+        print(self.tableau)
             
     def tableau_to_foundation(self):
         pass      
@@ -344,7 +369,7 @@ class Solitaire:
 # Direct code execution
 if __name__ == "__main__":
     S = Solitaire()
-    S.player() # first move
+    #S.player() # first move
     #while len(S.deck.keys()[S.deck.loc['stockID']!=0])>0:
         #S.player()
     #for i in range(1,100):
