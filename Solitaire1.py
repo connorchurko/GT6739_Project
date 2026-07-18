@@ -261,7 +261,7 @@ class Solitaire:
             return out
         
         # Step 7: Place card in wastepile
-        out[cardID] = 'waste' # set flag to tableau if card available
+        out[cardID] = 'tableau' # set flag to tableau if card available
         return out
     
         # Debug Line
@@ -419,5 +419,5 @@ if __name__ == "__main__":
     #S.player() # first move
     #while len(S.deck.keys()[S.deck.loc['stockID']!=0])>0:
     #S.player()
-    for i in range(1,100):
-        S.player()
+    #for i in range(1,100):
+    #S.player()
