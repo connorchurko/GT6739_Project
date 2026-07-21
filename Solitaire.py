@@ -228,12 +228,7 @@ class Solitaire:
             # Select foundation opening
             found_card = found[found.keys()[rank_cond & suit_cond]] 
         
-            if self.strategy == 'greedy' and len(found_card.keys())>0:
-                #goToFoundation = True
-                self.stockpile_to_foundation(cardID)
-                return
-            elif self.strategy == 'other':
-                #goToFoundation = True
+            if len(found_card.keys())>0:
                 self.stockpile_to_foundation(cardID)
                 return
         
@@ -614,3 +609,5 @@ if __name__ == "__main__":
     #S.player()
     for i in range(1,24):
         S.player()
+        
+    # replace player() function with strategy ("greedy","foundation_builder")
