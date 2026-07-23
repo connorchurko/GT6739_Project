@@ -7,7 +7,7 @@ class Solitaire:
     def __init__(self,selected_seed):
         self.strategy = 'greedy'
         self.seed = selected_seed
-        self.move_list = []
+        self.move_list = ['start']
         self.move_count = 0
         self.last_t2t = ''
         self.game_over = False
@@ -52,7 +52,7 @@ class Solitaire:
             self.deck[str(key)]['stockID'] = idx+1
             self.deck[str(key)]['wasteID'] = 0
             self.deck[str(key)]['foundationID'] = '00'
-            self.deck[str(key)]['tableauID'] = '00'
+            self.deck[str(key)]['tableauID'] = '000'
         
         # Convert Dictionary to Dataframe
         self.deck = pd.DataFrame(self.deck)
@@ -90,7 +90,7 @@ class Solitaire:
                 card_name = self.deck.columns[self.deck.loc['stockID']==card_index].tolist()[0]
         
                 self.deck[card_name].stockID = 0 # reset to zero, no longer in stockpile
-                self.deck[card_name].tableauID = str(pile)+str(position) # update tableauID in stockpile
+                self.deck[card_name].tableauID = f"{pile}{position:02}" # update tableauID in stockpile
                 
                 # Last card in each pile is face up
                 if position == pile - 1:
@@ -107,16 +107,16 @@ class Solitaire:
         # Initialize NaN DataFrame
         self.tableau = pd.DataFrame(
             np.nan,
-            index=range(13),
+            index=range(19),
             columns=[f'column{i}' for i in range(1, 8)]
             )
         
         # Create visual representation of tableau
-        tableau_df = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='00']]
+        tableau_df = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='000']]
         for cid in tableau_df.keys():
             tid = tableau_df[cid]['tableauID']
             col = int(str(tid)[0])
-            row = int(str(tid)[1])
+            row = int(str(tid)[1:])
             dir = tableau_df[cid]['direction']
             self.tableau.iloc[row,col-1] = f'{cid}({dir[0]})'
         print(self.tableau)
@@ -211,11 +211,11 @@ class Solitaire:
             return
         
         # 0b. Check Loss Criteria
-        lost = self.check_loss()
+        '''lost = self.check_loss()
         if lost:
             self.game_over = True
             self.result = "LOST"
-            return
+            return'''
         
         # 1a. Player checks if stockpile is empty. If yes, reset stockpile from wastepile
         stock = self.deck[self.deck.keys()[self.deck.loc['stockID']!=0]]
@@ -223,7 +223,8 @@ class Solitaire:
             self.reset_stockpile()
             
         # 1b. King Check (check if a King can be placed into an empty tableau pile)
-        self.king_check()
+        #self.king_check()
+        self.tableau_to_empty_move()
         
         # 2. Player pulls stockpile card
         cardID = self.deck.keys()[self.deck.loc['stockID'] == self.deck.loc['stockID'].max()][0] 
@@ -256,15 +257,13 @@ class Solitaire:
             return
         
         # Step 5: Check to see tableau piles can be moved to make space to move to foundation
-        moved = self.tableau_move_for_foundation()
-        if moved:
-            return
+        #moved = self.tableau_move_for_foundation()
+        #if moved:
+            #return
         
         # Step 6: Player checks if stockpile card can go to any upwards facing tableau cards
-        ### MUST BE CONFIGURED SMARTER TO FOLLOW STEP ABOVE
-        tab_card = self.check_stockpile_to_tableau(cardID)
-        if len(tab_card.keys())>0:
-            self.stockpile_to_tableau(cardID)
+        moved = self.stockpile_to_tableau(cardID)
+        if moved:
             return
         
         # Step 7: Check to see tableau piles can be moved to make space for stockpile card
@@ -288,7 +287,7 @@ class Solitaire:
         tabIDs = self.find_top_tab('up')
         find_kings = [idx for idx in tabIDs if self.deck[idx]['name']=='king']
         
-        tab = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='00']]
+        tab = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='000']]
         tabs = np.array([int(a) for a in tab.loc['tableauID']])
         cols = tabs//10 # floor division
         empty_cols = [i for i in range(1,8) if i not in cols]
@@ -299,7 +298,7 @@ class Solitaire:
                 # Move King to Empty Slot
                 cardID = find_kings[j]
                 oldID = self.deck[cardID]['tableauID']
-                newID = f"{empty_cols[j]}0"
+                newID = f"{empty_cols[j]}00"
                 # Move Tableau card (MUST BE UPDATED TO MOVE FULL PILE)
                 print(f"{cardID} moved from tableau into column {empty_cols[j]} in tableau")
                 self.update_tableau_visual(cardID,newID,'move') # update visual
@@ -308,6 +307,83 @@ class Solitaire:
                 if int(oldID[-1])!=0:
                     nid = self.deck.keys()[self.deck.loc['tableauID']==str(int(oldID)-1)][0]
                     self.deck[nid]['direction']='up'
+                    
+    def tableau_to_empty_move(self):
+        card_moved = False
+    
+        # --- Your empty-column search ---
+        tab = self.deck[self.deck.keys()[self.deck.loc['tableauID'] != '000']]
+        cols = np.array([int(a[0]) for a in tab.loc['tableauID']])
+        empty_cols = [i for i in range(1, 8) if i not in cols]
+    
+        if not empty_cols:
+            return card_moved  # no empty columns available, nothing to do
+    
+        # All face-up cards currently in the tableau (candidates to be a group "head")
+        AllUpIDs = [cid for cid in self.deck.keys()
+                    if self.deck[cid]['direction'] == 'up' and self.deck[cid]['tableauID'] != '000']
+    
+        # Only Kings can be placed into an empty column
+        KingIDs = [cid for cid in AllUpIDs if self.deck[cid]['rank'] == '13']
+    
+        for childID in KingIDs:
+            src_col = int(self.deck[childID]['tableauID']) // 10
+            child_row = int(self.deck[childID]['tableauID']) % 10
+    
+            # Guard: skip if this King is already alone at the bottom of its column
+            # (row 0) — moving it to another empty column would be a pointless no-op.
+            if child_row == 0:
+                continue
+    
+            # --- Build the group riding on top of the King (same logic as before) ---
+            group_ids = [
+                cid for cid in AllUpIDs
+                if int(self.deck[cid]['tableauID']) // 10 == src_col
+                and int(self.deck[cid]['tableauID']) % 10 >= child_row
+            ]
+            group_ids.sort(key=lambda cid: int(self.deck[cid]['tableauID']) % 10)  # King first, then descending ranks
+    
+            # --- Validate it's an unbroken King-high sequence ---
+            valid_group = True
+            for i in range(1, len(group_ids)):
+                prev_id, curr_id = group_ids[i - 1], group_ids[i]
+                same_col = (int(self.deck[curr_id]['tableauID']) // 10 ==
+                            int(self.deck[prev_id]['tableauID']) // 10)
+                next_row = (int(self.deck[curr_id]['tableauID']) % 10 ==
+                            int(self.deck[prev_id]['tableauID']) % 10 + 1)
+                rank_seq = self.deck[curr_id]['rank'] == str(int(self.deck[prev_id]['rank']) - 1)
+                alt_clr = self.deck[curr_id]['color'] != self.deck[prev_id]['color']
+                if not (same_col and next_row and rank_seq and alt_clr):
+                    valid_group = False
+                    break
+    
+            if not valid_group:
+                continue
+    
+            dest_col = empty_cols[0]  # pick the first available empty column
+            card_moved = True
+            oldID = self.deck[childID]['tableauID']
+    
+            # --- Move every card in the group into the empty column ---
+            prev_landing = None
+            for offset, cid in enumerate(group_ids):
+                newID = str(dest_col * 10 + offset)
+                print(f"{cid} moved from tableau onto empty column {dest_col}"
+                      if prev_landing is None else f"{cid} moved from tableau onto {prev_landing} in tableau")
+                self.update_tableau_visual(cid, newID, 'move')  # update visual
+                self.deck[cid]['tableauID'] = newID             # update value
+                prev_landing = cid
+    
+            # --- Flip the newly exposed card in the source column, if any ---
+            if child_row != 0:
+                nid = self.deck.keys()[self.deck.loc['tableauID'] == str(src_col * 10 + child_row - 1)][0]
+                self.deck[nid]['direction'] = 'up'
+    
+            empty_cols.pop(0)  # that column is no longer empty
+            if not empty_cols:
+                break  # no more empty columns left to fill
+    
+        return card_moved
     
     def stockpile_to_wastepile(self,cardID: str):
         # Move top stockpile card to wastepile (update wasteID, make stockID = 0)
@@ -315,7 +391,7 @@ class Solitaire:
         self.deck[cardID]['stockID'] = 0
         
         # Reset stockpile and flip
-        self.deck.loc['direction'][(self.deck.loc['stockID']!='00') & (self.deck.loc['stockID']==self.deck.loc['stockID'].max())] = 'up'
+        self.deck.loc['direction'][(self.deck.loc['stockID']!=0) & (self.deck.loc['stockID']==self.deck.loc['stockID'].max())] = 'up'
         
         # Update move list
         self.move_list.extend(['waste'])
@@ -331,7 +407,7 @@ class Solitaire:
         self.deck[cardID]['stockID'] = 0
         
         # Reset stockpile and flip
-        self.deck.loc['direction'][(self.deck.loc['stockID']!='00') & (self.deck.loc['stockID']==self.deck.loc['stockID'].max())] = 'up'
+        self.deck.loc['direction'][(self.deck.loc['stockID']!=0) & (self.deck.loc['stockID']==self.deck.loc['stockID'].max())] = 'up'
         
         self.move_list.extend(['foundation'])
         self.move_count+=1
@@ -340,18 +416,15 @@ class Solitaire:
         self.top_stockpile()
         
     def find_top_tab(self, direction: str): 
-        tab = self.deck[self.deck.keys()[(self.deck.loc['tableauID']!='00') & (self.deck.loc['direction']==direction)]]
-        tabs = [int(a) for a in tab.loc['tableauID']]
-        tabs = np.array(tabs)
-        
-        cols = tabs//10 # floor division
-        rows = tabs % 10
+        tab = self.deck[self.deck.keys()[(self.deck.loc['tableauID']!='000') & (self.deck.loc['direction']==direction)]]
+        cols = np.array([int(c[0]) for c in tab.loc['tableauID']])
+        rows = np.array([int(c[1:]) for c in tab.loc['tableauID']])
         
         # Determine Tableau ID for top cards
         endIDs = []
         for c in np.unique(cols):
             max_row = rows[cols==c].max()
-            endIDs.extend([str(c)+str(max_row)])
+            endIDs.extend([f"{c}{max_row:02}"])
         
         # Convert tableauIDs into cardIDs
         tabIDs = [tid for tid in self.deck.keys() if str(self.deck[tid]['tableauID']) in endIDs]
@@ -370,7 +443,7 @@ class Solitaire:
     def update_tableau_visual(self, cardID: str, tabID: int, action: str):
         # Must be called before updating the tableauID
         col = int(str(tabID)[0])
-        row = int(str(tabID)[1])
+        row = int(str(tabID)[1:])
         if action=='add':
             direction = self.deck[cardID]['direction']
             self.tableau.iloc[row,col-1] = f'{cardID}({direction[0]})'
@@ -381,7 +454,7 @@ class Solitaire:
                 cid = self.deck.keys()[self.deck.loc['tableauID']==str(int(tabID)-1)][0]
                 tid = self.deck[cid]['tableauID']
                 ncol = int(str(tid)[0])
-                nrow = int(str(tid)[1])
+                nrow = int(str(tid)[1:])
                 self.tableau.iloc[nrow,ncol-1] = f'{cid}(u)'
         elif action=='move':
             # Add card to new location
@@ -390,7 +463,7 @@ class Solitaire:
             # Remove card from old location
             tid = self.deck[cardID]['tableauID']
             ncol = int(str(tid)[0])
-            nrow = int(str(tid)[1])
+            nrow = int(str(tid)[1:])
             self.tableau.iloc[nrow,ncol-1] = np.nan
             # Flip new card
             if nrow!=0: # dont flip if top card
@@ -399,36 +472,11 @@ class Solitaire:
                     cid=cid[0]
                     tid = self.deck[cid]['tableauID']
                     ncol = int(str(tid)[0])
-                    nrow = int(str(tid)[1])
+                    nrow = int(str(tid)[1:])
                     self.tableau.iloc[nrow,ncol-1] = f'{cid}(u)'
         else:
             print('Invalid Input to Update Tableau Visual')
         print(self.tableau)
-        
-    def check_stockpile_to_tableau(self, cardID: str):
-        card_data = self.deck[cardID]
-        
-        # Find all cards in tableau 
-        tab = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='00']]
-        
-        # Step 5.1: Determine if cards of rank+1 are in tableau
-        rank_cond = tab.loc['rank']==str(int(card_data['rank'])+1)
-        
-        # Step 5.2: Determine if rank+1 card is face up
-        dir_cond = tab.loc['direction']=='up'
-        
-        # Step 5.3: Determine if rank+1, face up card is opposite color
-        clr_cond = tab.loc['color']!=card_data['color']
-        
-        # Step 5.4: Find available tableau card
-        tab_card = tab[tab.keys()[rank_cond & dir_cond & clr_cond]]
-        
-        # Step 5.5: Confirm possible cards are at end of tableau
-        endIDs = self.find_top_tab('up')
-        validIDs = [tid for tid in tab_card.keys() if tab_card[tid].name in endIDs]
-        tab_card = tab_card[validIDs]
-        
-        return tab_card
     
     def stockpile_to_tableau(self, cardID: str):
         '''
@@ -447,13 +495,11 @@ class Solitaire:
         
         if card_data['name']=='king':
             # Check if Empty Column to place king
-            tab = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='00']]
-            tabs = np.array([int(a) for a in tab.loc['tableauID']])
-            cols = tabs//10 # floor division
+            tab = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='000']]
+            cols = [int(a[0]) for a in tab.loc['tableauID']]            
             empty_cols = [i for i in range(1,8) if i not in cols]
             if len(empty_cols)>0:
-                newID = f"{empty_cols[0]}0"
-                print(f"{cardID} moved from stockpile into column {empty_cols[0]} in tableau")
+                newID = f"{empty_cols[0]}00"
                 # Move top stockpile card to chosen card in tableau (update tableauID, make stockID = 0)
                 self.deck[cardID]['tableauID'] = newID
                 self.deck[cardID]['stockID'] = 0
@@ -462,33 +508,36 @@ class Solitaire:
                 self.move_count+=1
                 
                 # Reset stockpile and flip
-                self.deck.loc['direction'][(self.deck.loc['stockID']!='00') & (self.deck.loc['stockID']==self.deck.loc['stockID'].max())] = 'up'
+                self.deck.loc['direction'][(self.deck.loc['stockID']!=0) & (self.deck.loc['stockID']==self.deck.loc['stockID'].max())] = 'up'
                 
                 print(f"{cardID} moved from stockpile into column {empty_cols[0]} in tableau")
                 self.update_tableau_visual(cardID, newID,'add') # Update tableau visual
                 self.top_stockpile()
-                return
-        
-        
+                return True
+
+        # Check to Confirm There is a card suitable in tableau
         # Find all cards in tableau 
-        tab = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='00']]
+        tab = self.deck[self.deck.keys()[self.deck.loc['tableauID']!='000']]
         
-        # Step 1: Determine if cards of rank+1 are in tableau
+        # Step 5.1: Determine if cards of rank+1 are in tableau
         rank_cond = tab.loc['rank']==str(int(card_data['rank'])+1)
         
-        # Step 2: Determine if rank+1 card is face up
+        # Step 5.2: Determine if rank+1 card is face up
         dir_cond = tab.loc['direction']=='up'
         
-        # Step 3: Determine if rank+1, face up card is opposite color
+        # Step 5.3: Determine if rank+1, face up card is opposite color
         clr_cond = tab.loc['color']!=card_data['color']
         
-        # Find available tableau card
-        open_card = tab[tab.keys()[rank_cond & dir_cond & clr_cond]]
+        # Step 5.4: Find available tableau card
+        tab_card = tab[tab.keys()[rank_cond & dir_cond & clr_cond]]
         
-        # Confirm possible cards are at end of tableau
+        # Step 5.5: Confirm possible cards are at end of tableau
         endIDs = self.find_top_tab('up')
-        validIDs = [tid for tid in open_card.keys() if open_card[tid].name in endIDs]
-        open_card = open_card[validIDs]
+        validIDs = [tid for tid in tab_card.keys() if tab_card[tid].name in endIDs]
+        open_card = tab_card[validIDs]
+        
+        if len(open_card.keys())==0:
+            return False
         
         # CHOOSE FIRST OPTION (TO BE UPDATED WITH STRATEGIES)
         chosen_card = open_card[open_card.keys()[0]]
@@ -502,12 +551,12 @@ class Solitaire:
         self.move_count+=1
         
         # Reset stockpile and flip
-        self.deck.loc['direction'][(self.deck.loc['stockID']!='00') & (self.deck.loc['stockID']==self.deck.loc['stockID'].max())] = 'up'
+        self.deck.loc['direction'][(self.deck.loc['stockID']!=0) & (self.deck.loc['stockID']==self.deck.loc['stockID'].max())] = 'up'
         
         print(f"{cardID} moved from stockpile onto {chosen_card.name} in tableau")
         self.update_tableau_visual(cardID, tid,'add') # Update tableau visual
         self.top_stockpile()
-        return
+        return True
     
     def tableau_to_foundation(self):
         # Find positions of top most cards of tableau
@@ -524,14 +573,16 @@ class Solitaire:
                 tabID = self.deck[cid]['tableauID']
                 self.update_tableau_visual(cid,tabID,'remove')
                 self.deck[cid]['foundationID'] = cid
-                self.deck[cid]['tableauID'] = '00'
+                self.deck[cid]['tableauID'] = '000'
                 
                 self.move_list.extend(['foundation'])
                 self.move_count+=1
                 
                 # Flip opened card
-                nid = self.deck.keys()[self.deck.loc['tableauID']==str(int(tabID)-1)][0]
-                self.deck[nid]['direction']='up'
+                if tabID[1:]!='00':
+                    print(tabID)
+                    nid = self.deck.keys()[self.deck.loc['tableauID']==str(int(tabID)-1)][0]
+                    self.deck[nid]['direction']='up'
 
         # Check tableau for potential foundation placements
         #cards = [tid for tid in self.deck[tabIDs] for fid in self.deck[foundIDs] if (S.deck[tid].loc['value']==S.deck[fid].loc['value']+1) & (S.deck[tid].loc['suit']==S.deck[fid].loc['suit'])]
@@ -542,17 +593,17 @@ class Solitaire:
                     tabID = self.deck[tid]['tableauID']
                     self.update_tableau_visual(tid,tabID,'remove')
                     self.deck[tid]['foundationID'] = tid
-                    self.deck[tid]['tableauID'] = '00'
+                    self.deck[tid]['tableauID'] = '000'
                     
                     self.move_list.extend(['foundation'])
                     self.move_count+=1
                     
                     # Flip opened card
-                    if tabID[-1]!=0:
+                    if tabID[1:]!='00':
                         nid = self.deck.keys()[self.deck.loc['tableauID']==str(int(tabID)-1)][0]
                         self.deck[nid]['direction']='up'
     
-    # Function must work if moving group of cards to new pile
+    '''# Function must work if moving group of cards to new pile
     def tableau_move(self): 
         card_moved = False
         TabIDs = self.find_top_tab('up') # Find top-most, down tableau cards
@@ -579,7 +630,7 @@ class Solitaire:
                             if int(oldID[-1])!=0:
                                 nid = self.deck.keys()[self.deck.loc['tableauID']==str(int(oldID)-1)][0]
                                 self.deck[nid]['direction']='up'
-        return card_moved
+        return card_moved'''
     
     # Function must work if moving group of cards to new pile
     def tableau_move2(self):
@@ -590,68 +641,97 @@ class Solitaire:
         # of a group, not just the exposed top card of a column.
         # (Swap this out for an existing helper if you have one, e.g. self.find_all_tab('up'))
         AllUpIDs = [cid for cid in self.deck.keys()
-                    if (self.deck[cid]['direction']=='up') and (self.deck[cid]['tableauID']!='00')]
+                    if (self.deck[cid]['direction']=='up') and (self.deck[cid]['tableauID']!='000')]
     
+        # First determine all valid tableau-tableau options
+        move_options = []
         for tid in TabIDs:
             for childID in AllUpIDs:
                 if tid == childID:
                     continue
-    
-                # Checks for tableau placement (based on the head card of the group, childID)
-                rank_cond = self.deck[tid]['rank'] == str(int(self.deck[childID]['rank']) + 1)  # Step 1
-                dir_cond = self.deck[tid]['direction'] == 'up'                                   # Step 2
-                clr_cond = self.deck[tid]['color'] != self.deck[childID]['color']                 # Step 3
-                col_cond = self.deck[tid]['tableauID'][0] != self.deck[childID]['tableauID'][0]
-    
-                if rank_cond & dir_cond & clr_cond & col_cond:
-                    # --- Determine the full group riding along with childID ---
-                    src_col = self.deck[childID]['tableauID'][0]
-                    child_row = int(self.deck[childID]['tableauID'][1:])
-    
-                    group_ids = [
-                        cid for cid in AllUpIDs
-                        if self.deck[cid]['tableauID'][0] == src_col
-                        and int(self.deck[cid]['tableauID'][1:]) >= child_row
-                    ]
-                    group_ids.sort(key=lambda cid: int(self.deck[cid]['tableauID'][1:]))  # bottom (childID) first
-    
-                    # --- Safety check: confirm it's actually a valid, unbroken sequence ---
-                    valid_group = True
-                    for i in range(1, len(group_ids)):
-                        prev_id, curr_id = group_ids[i - 1], group_ids[i]
-                        same_col = self.deck[curr_id]['tableauID'][0] == self.deck[prev_id]['tableauID'][0]
-                        next_row = int(self.deck[curr_id]['tableauID'][1:]) == int(self.deck[prev_id]['tableauID'][1:]) + 1
-                        rank_seq = self.deck[curr_id]['rank'] == str(int(self.deck[prev_id]['rank']) - 1)
-                        alt_clr = self.deck[curr_id]['color'] != self.deck[prev_id]['color']
-                        if not (same_col and next_row and rank_seq and alt_clr):
-                            valid_group = False
-                            break
-    
-                    if not valid_group:
-                        continue
-    
-                    card_moved = True
-                    oldID = self.deck[childID]['tableauID']  # childID's original (lowest-row) position
-    
-                    # --- Move every card in the group, preserving relative order ---
-                    base_row = int(self.deck[tid]['tableauID'][1:]) + 1
-                    dest_col = self.deck[tid]['tableauID'][0]
-                    prev_landing = tid
-                    for offset, cid in enumerate(group_ids):
-                        newID = f"{dest_col}{base_row + offset}"
-                        print(f"{cid} moved from tableau onto {prev_landing} in tableau")
-                        self.update_tableau_visual(cid, newID, 'move')  # update visual
-                        self.deck[cid]['tableauID'] = newID             # update value
-                        prev_landing = cid
-    
-                    # --- Flip the newly exposed card in the source column, if any ---
-                    if child_row != 0:
-                        nid = self.deck.keys()[self.deck.loc['tableauID'] == f"{src_col}{child_row - 1}"][0]
-                        self.deck[nid]['direction'] = 'up'
-    
+                if (childID!=self.last_t2t) & (self.move_list[-1]!='tableau-tableau'):
+                    # Checks for tableau placement (based on the head card of the group, childID)
+                    rank_cond = self.deck[tid]['rank'] == str(int(self.deck[childID]['rank']) + 1)  # Step 1
+                    dir_cond = self.deck[tid]['direction'] == 'up'                                   # Step 2
+                    clr_cond = self.deck[tid]['color'] != self.deck[childID]['color']                 # Step 3
+                    col_cond = self.deck[tid]['tableauID'][0] != self.deck[childID]['tableauID'][0]
+        
+                    if rank_cond & dir_cond & clr_cond & col_cond:
+                        move_options.append([tid,childID])
+        
+                        # --- Determine the full group riding along with childID ---
+                        src_col = self.deck[childID]['tableauID'][0]
+                        child_row = int(self.deck[childID]['tableauID'][1:])
+                
+                        group_ids = [
+                            cid for cid in AllUpIDs
+                            if self.deck[cid]['tableauID'][0] == src_col
+                            and int(self.deck[cid]['tableauID'][1:]) >= child_row
+                        ]
+                        group_ids.sort(key=lambda cid: int(self.deck[cid]['tableauID'][1:]))  # bottom (childID) first
+                
+                        # --- Safety check: confirm it's actually a valid, unbroken sequence ---
+                        valid_group = True
+                        for i in range(1, len(group_ids)):
+                            prev_id, curr_id = group_ids[i - 1], group_ids[i]
+                            same_col = self.deck[curr_id]['tableauID'][0] == self.deck[prev_id]['tableauID'][0]
+                            next_row = int(self.deck[curr_id]['tableauID'][1:]) == int(self.deck[prev_id]['tableauID'][1:]) + 1
+                            rank_seq = self.deck[curr_id]['rank'] == str(int(self.deck[prev_id]['rank']) - 1)
+                            alt_clr = self.deck[curr_id]['color'] != self.deck[prev_id]['color']
+                            if not (same_col and next_row and rank_seq and alt_clr):
+                                valid_group = False
+                                break
+                
+                        if not valid_group:
+                            continue
+                        
+        if len(move_options)==0:
+            return card_moved
+        
+        card_moved = True
+        
+        # Determine random choice
+        rng = np.random.default_rng()
+        rng_idx = int(rng.integers(low=0, high=len(move_options), size=1))
+        print(move_options)
+        print(rng_idx)
+        tid = move_options[rng_idx][0]
+        childID = move_options[rng_idx][1]
+        
+        # --- Determine the full group riding along with childID ---
+        src_col = self.deck[childID]['tableauID'][0]
+        child_row = int(self.deck[childID]['tableauID'][1:])
+
+        # Given smaller sample size, redo group
+        group_ids = [
+            cid for cid in AllUpIDs
+            if self.deck[cid]['tableauID'][0] == src_col
+            and int(self.deck[cid]['tableauID'][1:]) >= child_row
+        ]
+        group_ids.sort(key=lambda cid: int(self.deck[cid]['tableauID'][1:]))  # bottom (childID) first
+
+        # --- Move every card in the group, preserving relative order ---
+        base_row = int(self.deck[tid]['tableauID'][1:]) + 1
+        dest_col = self.deck[tid]['tableauID'][0]
+        prev_landing = tid
+        for offset, cid in enumerate(group_ids):
+            newID = f"{dest_col}{base_row + offset:02}"
+            print(f"{cid} moved from tableau onto {prev_landing} in tableau")
+            self.update_tableau_visual(cid, newID, 'move')  # update visual
+            self.deck[cid]['tableauID'] = newID             # update value
+            prev_landing = cid
+        self.move_list.extend(['tableau-tableau'])
+        self.move_count+=1
+        self.last_t2t = childID
+
+        # --- Flip the newly exposed card in the source column, if any ---
+        if child_row != 0:
+            nid = self.deck.keys()[self.deck.loc['tableauID'] == f"{src_col}{child_row - 1:02}"][0]
+            self.deck[nid]['direction'] = 'up'
+        self.top_stockpile()
         return card_moved                        
     
-    # Function must work if moving group of cards to new pile
+    '''# Function must work if moving group of cards to new pile
     def tableau_move_for_foundation(self):   
         card_moved = False
 
@@ -698,20 +778,12 @@ class Solitaire:
                     self.tableau_to_foundation()
                     card_moved = True
                     
-        return card_moved
-
-    # Function must work if moving group of cards to new pile
-    def tableau_move_for_stockpile(self, cardID: str):  
-        # 3. Check to see if stockpile card can move onto open tableau card
-        card_data = S.deck[cardID] # Get current stock card data
-        
-        # Determine up facing tableau cards
-        tab = S.deck[S.deck.keys()[(S.deck.loc['tableauID']!='00') & (S.deck.loc['direction']=='up')]]
+        return card_moved'''
             
     def check_win(self):
         
         numStock = sum(S.deck.loc['stockID']!=0) # number in stockpile
-        numTab   = sum(S.deck.loc['tableauID']!='00') # number in tableau
+        numTab   = sum(S.deck.loc['tableauID']!='000') # number in tableau
         numWaste = sum(S.deck.loc['wasteID']!=0) # number in wastepile
         numFound = sum(S.deck.loc['foundationID']!='00') # number in foundation
         total_cards = numStock+numTab+numWaste+numFound
@@ -744,6 +816,75 @@ class Solitaire:
             loss = True
             #print("GAME LOST")
         return loss
+    
+    def check_loss2(self):
+        """
+        Returns True if no legal move remains (loss condition), False otherwise.
+        Checks, in order: stock/waste availability, foundation moves,
+        tableau-to-tableau moves (single card or valid group), and
+        King-to-empty-column moves.
+        """
+    
+        # --- 1. Stock/Waste: can we still draw? ---
+        # If there are any cards left in the stock pile, the player always has a move
+        # (drawing doesn't require anything else to be true).
+        stock_ids = [cid for cid in self.deck.keys() if self.deck[cid]['stockID'] != '00']
+        if stock_ids:
+            return False  # not a loss - can draw
+    
+        # If stock is empty, check whether waste can be redealt back into stock.
+        # (Standard Klondike: emptied stock reshuffles from waste indefinitely,
+        #  unless you're enforcing a limited-pass-through-deck variant.)
+        waste_ids = [cid for cid in self.deck.keys() if self.deck[cid]['wasteID'] != '00']
+        if waste_ids:
+            return False  # not a loss - waste can be redealt to stock and drawn again
+    
+        # --- 2. Foundation moves: can any exposed card go up? ---
+        # Exposed cards = top of each tableau column, plus the top waste card (already empty here, but kept general)
+        exposed_ids = list(self.find_top_tab('up')) + waste_ids
+    
+        for cid in exposed_ids:
+            suit = self.deck[cid]['suit']
+            rank = int(self.deck[cid]['rank'])
+            # foundation top rank for this suit; assumes a dict/series self.foundation[suit] -> current top rank (0 if empty)
+            self.find_top_foundation()
+            foundation_top = int(self.foundation[suit]) if self.foundation[suit] != '00' else 0
+            if rank == foundation_top + 1:
+                return False  # not a loss - a foundation move exists
+    
+        # --- 3. Tableau-to-tableau moves: same conditions as tableau_move ---
+        TabIDs = self.find_top_tab('up')
+        AllUpIDs = [cid for cid in self.deck.keys()
+                    if self.deck[cid]['direction'] == 'up' and self.deck[cid]['tableauID'] != '00']
+    
+        for tid in TabIDs:
+            for childID in AllUpIDs:
+                if tid == childID:
+                    continue
+                rank_cond = self.deck[tid]['rank'] == str(int(self.deck[childID]['rank']) + 1)
+                dir_cond = self.deck[tid]['direction'] == 'up'
+                clr_cond = self.deck[tid]['color'] != self.deck[childID]['color']
+                col_cond = self.deck[tid]['tableauID'][0] != self.deck[childID]['tableauID'][0]
+                if rank_cond & dir_cond & clr_cond & col_cond:
+                    return False  # not a loss - a tableau move exists
+    
+        # --- 4. King-to-empty-column moves ---
+        tab = self.deck[self.deck.keys()[self.deck.loc['tableauID'] != '00']]
+        tabs = np.array([int(a) for a in tab.loc['tableauID']])
+        cols = tabs // 10
+        empty_cols = [i for i in range(1, 8) if i not in cols]
+    
+        if empty_cols:
+            for cid in AllUpIDs:
+                if self.deck[cid]['rank'] == '13':
+                    src_col = int(self.deck[cid]['tableauID']) // 10
+                    child_row = int(self.deck[cid]['tableauID']) % 10
+                    # Only counts as a real move if the King isn't already alone in its own column
+                    if child_row != 0:
+                        return False  # not a loss - a King can move to an empty column
+    
+        # --- No move type produced a legal move ---
+        return True
         
         
             
@@ -751,15 +892,20 @@ class Solitaire:
         
 # Direct code execution
 if __name__ == "__main__":
-    selected_seed = 50
+    selected_seed = 3
     S = Solitaire(selected_seed)
     #S.player() # first move
     #while len(S.deck.keys()[S.deck.loc['stockID']!=0])>0:
     #S.player()
-    for i in range(1,35):
+    for i in range(1,100):
         if S.game_over:
             print(f"\nGame {S.result} in {S.move_count} moves.")
             break
         S.player()
         
+    #while not S.game_over:
+        #S.player()
+    #print(f"\nGame {S.result} in {S.move_count} moves.") 
+    
+    
     # replace player() function with strategy ("greedy","random")
