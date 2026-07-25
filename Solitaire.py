@@ -9,7 +9,7 @@ class Solitaire:
         self.seed = selected_seed
         self.move_list = ['start']
         self.move_count = 0
-        self.last_t2t = ''
+        self.last_t2t = []
         self.game_over = False
         self.result = 'ACTIVE'
         self.SWflag = False
@@ -236,26 +236,30 @@ class Solitaire:
         # 2. Player checks stockpile to foundation placement
         moved = self.stockpile_to_foundation()
         if moved:
+            self.last_t2t = []
             return
         
         # 3: Player checks if any top level tableau cards can go to foundation
         moved = self.tableau_to_foundation()
         if moved:
+            self.last_t2t = []
             return
         
         # 4: Player checks if stockpile card can go to any upwards facing tableau cards
         moved = self.stockpile_to_tableau()
         if moved:
+            self.last_t2t = []
             return
         
         # 5: Check for general tableau swap as last chance
-        moved = self.tableau_move2()
+        moved = self.tableau_move()
         if moved:
             return
         
         # 6: Place card in wastepile
         moved = self.stockpile_to_wastepile()
         if moved:
+            self.last_t2t = []
             return
     
         # Debug Line
@@ -367,14 +371,10 @@ class Solitaire:
         stock = self.deck[self.deck.keys()[self.deck.loc['stockID']!=0]]
         if (len(stock.keys())==0):
             return False
-        
         cardID = self.deck.keys()[self.deck.loc['stockID'] == self.deck.loc['stockID'].max()][0] 
         card_data = self.deck[cardID] 
-        
-        # 3. Player checks stockpile to foundation placement
         if card_data['name'] =='ace': # Aces auto foundation
-            # Move top stockpile card to wastepile (update foundationID, make stockID = 0)
-            self.deck[cardID]['foundationID'] = cardID
+            self.deck[cardID]['foundationID'] = cardID# Move top stockpile card to wastepile (update foundationID, make stockID = 0)
             self.deck[cardID]['stockID'] = 0
             
             # Reset stockpile and flip
@@ -556,7 +556,6 @@ class Solitaire:
         
         # Reset stockpile and flip
         self.deck.loc['direction'][(self.deck.loc['stockID']!=0) & (self.deck.loc['stockID']==self.deck.loc['stockID'].max())] = 'up'
-        
         print(f"{cardID} moved from stockpile onto {chosen_card.name} in tableau")
         self.update_tableau_visual(cardID, tid,'add') # Update tableau visual
         self.top_stockpile()
@@ -612,7 +611,7 @@ class Solitaire:
         return False
     
     # Function must work if moving group of cards to new pile
-    def tableau_move2(self):
+    def tableau_move(self):
         TabIDs = self.find_top_tab('up')  # Top-most, face-up card in each tableau column (valid destinations)
     
         # All face-up cards currently in the tableau — any of these can be the "head"
@@ -628,7 +627,7 @@ class Solitaire:
                 if tid == childID:
                     continue
                 #if not ((childID==self.last_t2t) and (self.move_list[-1]=='tableau-tableau')):
-                if (childID!=self.last_t2t) and (self.move_list[-1:]!='tableau-tableau'):
+                if (childID not in self.last_t2t) and (self.move_list[-1:]!='tableau-tableau'):
                     # Checks for tableau placement (based on the head card of the group, childID)
                     rank_cond = self.deck[tid]['rank'] == str(int(self.deck[childID]['rank']) + 1)  # Step 1
                     dir_cond = self.deck[tid]['direction'] == 'up'                                   # Step 2
@@ -713,7 +712,7 @@ class Solitaire:
             prev_landing = cid
         self.move_list.extend(['tableau-tableau'])
         self.move_count+=1
-        self.last_t2t = childID
+        self.last_t2t.extend([childID])
 
         # --- Flip the newly exposed card in the source column, if any ---
         if child_row != 0:
