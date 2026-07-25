@@ -13,8 +13,12 @@ class Solitaire:
         self.game_over = False
         self.result = 'ACTIVE'
         self.SWflag = False
+        self.system_error = False
+        self.max_moves = 300
         
+        # Begin Game
         self.initiate_solitaire_board()
+        self.player()
         
     
     def generate_deck(self):
@@ -180,8 +184,32 @@ class Solitaire:
             # Add to move list
             self.move_list.extend(['reset'])
             print('Reseting stockpile from wastepile')
-    
+            
     def player(self):
+        # Function acts like a player choosing strategy, making moves, and evalutaing ending criteria
+        # Controlled For loop
+        '''for i in range(1,250):
+            if self.game_over:
+                print(f"\nGame {self.result} in {self.move_count} moves.")
+                break
+            elif self.system_error:
+                break
+            self.vibe()'''
+        
+        # While Loop (may becoeme infinite... use with cauition Must have good boundaries)
+        while not self.game_over:
+            if self.system_error:
+                break
+            elif self.move_count >= self.max_moves:
+                print(f"Game Over: Reached maximum allowable number of moves: {self.max_moves}")
+                break
+            else:
+                self.vibe()
+                
+        if self.game_over:
+            print(f"\nGame {self.result} in {self.move_count} moves.")
+    
+    def vibe(self):
         '''
         Returns
         -------
@@ -264,7 +292,8 @@ class Solitaire:
     
         # Debug Line
         if True:
-            print('error in card placement')
+            self.system_error = True
+            print('Stopping Play: Error in Card Placement')
                     
     def tableau_to_empty_move(self):
         card_moved = False
@@ -683,8 +712,8 @@ class Solitaire:
         # Determine random choice
         rng = np.random.default_rng()
         rng_idx = int(rng.integers(low=0, high=len(selected_candidates), size=1))
-        print(selected_candidates)
-        print(rng_idx)
+        #print(selected_candidates)
+        #print(rng_idx)
         tid = selected_candidates[rng_idx][0]
         childID = selected_candidates[rng_idx][1]
         
@@ -723,10 +752,10 @@ class Solitaire:
             
     def check_win(self):
         # Check win criteria to end game
-        numStock = sum(S.deck.loc['stockID']!=0) # number in stockpile
-        numTab   = sum(S.deck.loc['tableauID']!='000') # number in tableau
-        numWaste = sum(S.deck.loc['wasteID']!=0) # number in wastepile
-        numFound = sum(S.deck.loc['foundationID']!='00') # number in foundation
+        numStock = sum(self.deck.loc['stockID']!=0) # number in stockpile
+        numTab   = sum(self.deck.loc['tableauID']!='000') # number in tableau
+        numWaste = sum(self.deck.loc['wasteID']!=0) # number in wastepile
+        numFound = sum(self.deck.loc['foundationID']!='00') # number in foundation
         total_cards = numStock+numTab+numWaste+numFound
         if total_cards!=52:
             raise ValueError(f"Error: Missing Cards. Total cards with valid IDs = {total_cards}")
@@ -741,10 +770,10 @@ class Solitaire:
         # consists on tableau-tableau moves or wastepile moves, then lose.
         loss = False
         
-        #if self.move_count >= 200:
-            #return True
+        if self.move_count >= 300:
+            return True
         
-        '''# Index of second to last reset
+        # Index of second to last reset
         indices = [i for i, x in enumerate(self.move_list) if x == 'reset']
         if len(indices)<2:
             return loss
@@ -759,96 +788,10 @@ class Solitaire:
         if num_resets+num_waste+num_tab2tab==len(move_subset):
             loss = True
             #print("GAME LOST")
-        return loss'''
-    
-    def check_loss2(self):
-        """
-        Returns True if no legal move remains (loss condition), False otherwise.
-        Checks, in order: stock/waste availability, foundation moves,
-        tableau-to-tableau moves (single card or valid group), and
-        King-to-empty-column moves.
-        """
-    
-        # --- 1. Stock/Waste: can we still draw? ---
-        # If there are any cards left in the stock pile, the player always has a move
-        # (drawing doesn't require anything else to be true).
-        stock_ids = [cid for cid in self.deck.keys() if self.deck[cid]['stockID'] != '00']
-        if stock_ids:
-            return False  # not a loss - can draw
-    
-        # If stock is empty, check whether waste can be redealt back into stock.
-        # (Standard Klondike: emptied stock reshuffles from waste indefinitely,
-        #  unless you're enforcing a limited-pass-through-deck variant.)
-        waste_ids = [cid for cid in self.deck.keys() if self.deck[cid]['wasteID'] != '00']
-        if waste_ids:
-            return False  # not a loss - waste can be redealt to stock and drawn again
-    
-        # --- 2. Foundation moves: can any exposed card go up? ---
-        # Exposed cards = top of each tableau column, plus the top waste card (already empty here, but kept general)
-        exposed_ids = list(self.find_top_tab('up')) + waste_ids
-    
-        for cid in exposed_ids:
-            suit = self.deck[cid]['suit']
-            rank = int(self.deck[cid]['rank'])
-            # foundation top rank for this suit; assumes a dict/series self.foundation[suit] -> current top rank (0 if empty)
-            self.find_top_foundation()
-            foundation_top = int(self.foundation[suit]) if self.foundation[suit] != '00' else 0
-            if rank == foundation_top + 1:
-                return False  # not a loss - a foundation move exists
-    
-        # --- 3. Tableau-to-tableau moves: same conditions as tableau_move ---
-        TabIDs = self.find_top_tab('up')
-        AllUpIDs = [cid for cid in self.deck.keys()
-                    if self.deck[cid]['direction'] == 'up' and self.deck[cid]['tableauID'] != '00']
-    
-        for tid in TabIDs:
-            for childID in AllUpIDs:
-                if tid == childID:
-                    continue
-                rank_cond = self.deck[tid]['rank'] == str(int(self.deck[childID]['rank']) + 1)
-                dir_cond = self.deck[tid]['direction'] == 'up'
-                clr_cond = self.deck[tid]['color'] != self.deck[childID]['color']
-                col_cond = self.deck[tid]['tableauID'][0] != self.deck[childID]['tableauID'][0]
-                if rank_cond & dir_cond & clr_cond & col_cond:
-                    return False  # not a loss - a tableau move exists
-    
-        # --- 4. King-to-empty-column moves ---
-        tab = self.deck[self.deck.keys()[self.deck.loc['tableauID'] != '00']]
-        tabs = np.array([int(a) for a in tab.loc['tableauID']])
-        cols = tabs // 10
-        empty_cols = [i for i in range(1, 8) if i not in cols]
-    
-        if empty_cols:
-            for cid in AllUpIDs:
-                if self.deck[cid]['rank'] == '13':
-                    src_col = int(self.deck[cid]['tableauID']) // 10
-                    child_row = int(self.deck[cid]['tableauID']) % 10
-                    # Only counts as a real move if the King isn't already alone in its own column
-                    if child_row != 0:
-                        return False  # not a loss - a King can move to an empty column
-    
-        # --- No move type produced a legal move ---
-        return True
-        
+        return loss       
                 
         
 # Direct code execution
 if __name__ == "__main__":
-    selected_seed = 4
+    selected_seed = 10
     S = Solitaire(selected_seed)
-    #S.player() # first move
-    #while len(S.deck.keys()[S.deck.loc['stockID']!=0])>0:
-    #S.player()
-    for i in range(1,201):
-        if S.game_over:
-            print(f"\nGame {S.result} in {S.move_count} moves.")
-            break
-        S.player()
-        
-        
-    #while not S.game_over:
-        #S.player()
-    #print(f"\nGame {S.result} in {S.move_count} moves.") 
-    
-    
-    # replace player() function with strategy ("greedy","random")
