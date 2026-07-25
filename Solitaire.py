@@ -5,7 +5,7 @@ class Solitaire:
     # This class is a simulated game of Solitaire
     
     def __init__(self,selected_seed):
-        self.strategy = 'greedy'
+        self.strategy = 'vibe' # greedy, random, vibe
         self.seed = selected_seed
         self.move_list = ['start']
         self.move_count = 0
@@ -20,7 +20,182 @@ class Solitaire:
         self.initiate_solitaire_board()
         self.player()
         
+    def player(self):
+        # Function acts like a player choosing strategy, making moves, and evalutaing ending criteria
+        # Controlled For loop
+        '''for i in range(1,250):
+            if self.game_over:
+                print(f"\nGame {self.result} in {self.move_count} moves.")
+                break
+            elif self.system_error:
+                break
+            self.vibe()'''
+        
+        # While Loop (may becoeme infinite... use with cauition Must have good boundaries)
+        while not self.game_over:
+            if self.system_error:
+                break
+            elif self.move_count >= self.max_moves:
+                print(f"Game Over: Reached maximum allowable number of moves: {self.max_moves}")
+                break
+            else:
+                match self.strategy:
+                    case 'vibe':
+                        self.vibe()
+                    case 'greedy':
+                        self.greedy()
+                    case 'random':
+                        self.random()
+                    case unknwon_value:
+                        print(f"Strategy '{unknwon_value}' is not a valid strategy. Try again.")
+                        break
+                
+        if self.game_over:
+            print(f"\nGame {self.result} in {self.move_count} moves.")
+            
+    def greedy(self):
+        pass
+            
+    def random(self):
+        # 0a. Check Win Criteria
+        game_win = self.check_win()
+        if game_win:
+            self.game_over = True
+            self.result = "WON"
+            return
+        
+        # 0b. Check Loss Criteria
+        lost = self.check_loss()
+        if lost:
+            self.game_over = True
+            self.result = "LOST"
+            return
+        
+        # 1a. Player checks if stockpile is empty. If yes, reset stockpile from wastepile
+        self.reset_stockpile()
+            
+        # 1b. King Check (check if a King can be placed into an empty tableau pile)
+        #self.king_check()
+        self.tableau_to_empty_move()
+        
+        # Create Methods List
+        methods = [
+            self.stockpile_to_foundation,
+            self.tableau_to_foundation,
+            self.stockpile_to_tableau,
+            self.tableau_to_tableau,
+            self.stockpile_to_wastepile
+            ]
+        
+        # Randomized Methods List
+        rng = np.random.default_rng()
+        rng_array = rng.choice(np.arange(0,len(methods)), size=len(methods), replace=False)
+        methods = [methods[i] for i in rng_array]
+        
+        # Run Randomized Order of Method
+        for method in methods:
+            moved = method()
+            if moved:
+                # Reset last tableau move
+                if self.move_list[-1]!='tableau-tableau':
+                    self.last_t2t = []
+                break
+        if moved:
+            return
     
+        # Debug Line
+        if True:
+            self.system_error = True
+            print('Stopping Play: Error in Card Placement')
+        
+        
+    
+    def vibe(self):
+        '''
+        Returns
+        -------
+        out : TYPE
+            DESCRIPTION.
+
+
+        Logic Sequence (Foundation First -> Greedy)
+        1. Player checks if stockpile is empty
+            if yes, reset stockpile from waste
+            if no, go to 2
+        2. Player pulls card from stockpile, got to 3
+        3. Player checks foundation placement valid
+            if yes, place card in foundation, go to 1
+            if no, go to 4
+        4. Player checks tableau to foundation placement valid
+            if yes, place card into foundation, go to 1 
+            if no, go to 5
+        5. Player checks if any up facing cards allow stockpile card to place
+            if yes, 
+                if top card, place stockpile pile card, go to 1
+                if middle card, player checks if tableau pile can move to tableau pile for room
+                    if yes, move tableau pile, place stockile card, go to 1
+                    if no, go to 6,7
+        (MAYBE???) 6. Players checks if top of foundation can go to tableau & stockpile can go to moved card
+            if yes, move foundation to tableau, then stockpile to tableau, got to 1
+            if no, go to 7
+        7. Player places stockpile card into wastepile
+        
+        '''        
+        # 0a. Check Win Criteria
+        game_win = self.check_win()
+        if game_win:
+            self.game_over = True
+            self.result = "WON"
+            return
+        
+        # 0b. Check Loss Criteria
+        lost = self.check_loss()
+        if lost:
+            self.game_over = True
+            self.result = "LOST"
+            return
+        
+        # 1a. Player checks if stockpile is empty. If yes, reset stockpile from wastepile
+        self.reset_stockpile()
+            
+        # 1b. King Check (check if a King can be placed into an empty tableau pile)
+        #self.king_check()
+        self.tableau_to_empty_move()
+        
+        # 2. Player checks stockpile to foundation placement
+        moved = self.stockpile_to_foundation()
+        if moved:
+            self.last_t2t = []
+            return
+        
+        # 3: Player checks if any top level tableau cards can go to foundation
+        moved = self.tableau_to_foundation()
+        if moved:
+            self.last_t2t = []
+            return
+        
+        # 4: Player checks if stockpile card can go to any upwards facing tableau cards
+        moved = self.stockpile_to_tableau()
+        if moved:
+            self.last_t2t = []
+            return
+        
+        # 5: Check for general tableau swap as last chance
+        moved = self.tableau_to_tableau()
+        if moved:
+            return
+        
+        # 6: Place card in wastepile
+        moved = self.stockpile_to_wastepile()
+        if moved:
+            self.last_t2t = []
+            return
+    
+        # Debug Line
+        if True:
+            self.system_error = True
+            print('Stopping Play: Error in Card Placement')
+            
     def generate_deck(self):
         '''
         Function: Generate Simulated Deck of Cards. 
@@ -183,117 +358,7 @@ class Solitaire:
             
             # Add to move list
             self.move_list.extend(['reset'])
-            print('Reseting stockpile from wastepile')
-            
-    def player(self):
-        # Function acts like a player choosing strategy, making moves, and evalutaing ending criteria
-        # Controlled For loop
-        '''for i in range(1,250):
-            if self.game_over:
-                print(f"\nGame {self.result} in {self.move_count} moves.")
-                break
-            elif self.system_error:
-                break
-            self.vibe()'''
-        
-        # While Loop (may becoeme infinite... use with cauition Must have good boundaries)
-        while not self.game_over:
-            if self.system_error:
-                break
-            elif self.move_count >= self.max_moves:
-                print(f"Game Over: Reached maximum allowable number of moves: {self.max_moves}")
-                break
-            else:
-                self.vibe()
-                
-        if self.game_over:
-            print(f"\nGame {self.result} in {self.move_count} moves.")
-    
-    def vibe(self):
-        '''
-        Returns
-        -------
-        out : TYPE
-            DESCRIPTION.
-
-
-        Logic Sequence (Foundation First -> Greedy)
-        1. Player checks if stockpile is empty
-            if yes, reset stockpile from waste
-            if no, go to 2
-        2. Player pulls card from stockpile, got to 3
-        3. Player checks foundation placement valid
-            if yes, place card in foundation, go to 1
-            if no, go to 4
-        4. Player checks tableau to foundation placement valid
-            if yes, place card into foundation, go to 1 
-            if no, go to 5
-        5. Player checks if any up facing cards allow stockpile card to place
-            if yes, 
-                if top card, place stockpile pile card, go to 1
-                if middle card, player checks if tableau pile can move to tableau pile for room
-                    if yes, move tableau pile, place stockile card, go to 1
-                    if no, go to 6,7
-        (MAYBE???) 6. Players checks if top of foundation can go to tableau & stockpile can go to moved card
-            if yes, move foundation to tableau, then stockpile to tableau, got to 1
-            if no, go to 7
-        7. Player places stockpile card into wastepile
-        
-        '''        
-        # 0a. Check Win Criteria
-        game_win = self.check_win()
-        if game_win:
-            self.game_over = True
-            self.result = "WON"
-            return
-        
-        # 0b. Check Loss Criteria
-        lost = self.check_loss()
-        if lost:
-            self.game_over = True
-            self.result = "LOST"
-            return
-        
-        # 1a. Player checks if stockpile is empty. If yes, reset stockpile from wastepile
-        self.reset_stockpile()
-            
-        # 1b. King Check (check if a King can be placed into an empty tableau pile)
-        #self.king_check()
-        self.tableau_to_empty_move()
-        
-        # 2. Player checks stockpile to foundation placement
-        moved = self.stockpile_to_foundation()
-        if moved:
-            self.last_t2t = []
-            return
-        
-        # 3: Player checks if any top level tableau cards can go to foundation
-        moved = self.tableau_to_foundation()
-        if moved:
-            self.last_t2t = []
-            return
-        
-        # 4: Player checks if stockpile card can go to any upwards facing tableau cards
-        moved = self.stockpile_to_tableau()
-        if moved:
-            self.last_t2t = []
-            return
-        
-        # 5: Check for general tableau swap as last chance
-        moved = self.tableau_move()
-        if moved:
-            return
-        
-        # 6: Place card in wastepile
-        moved = self.stockpile_to_wastepile()
-        if moved:
-            self.last_t2t = []
-            return
-    
-        # Debug Line
-        if True:
-            self.system_error = True
-            print('Stopping Play: Error in Card Placement')
+            print('Reseting stockpile from wastepile')            
                     
     def tableau_to_empty_move(self):
         card_moved = False
@@ -640,7 +705,7 @@ class Solitaire:
         return False
     
     # Function must work if moving group of cards to new pile
-    def tableau_move(self):
+    def tableau_to_tableau(self):
         TabIDs = self.find_top_tab('up')  # Top-most, face-up card in each tableau column (valid destinations)
     
         # All face-up cards currently in the tableau — any of these can be the "head"
@@ -793,5 +858,5 @@ class Solitaire:
         
 # Direct code execution
 if __name__ == "__main__":
-    selected_seed = 10
+    selected_seed = 4
     S = Solitaire(selected_seed)
