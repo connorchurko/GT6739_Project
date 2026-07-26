@@ -5,7 +5,7 @@ class Solitaire:
     # This class is a simulated game of Solitaire
     
     def __init__(self,selected_seed):
-        self.strategy = 'vibe' # greedy, random, vibe
+        self.strategy = 'greedy' # greedy, random, vibe
         self.seed = selected_seed
         self.move_list = ['start']
         self.move_count = 0
@@ -34,6 +34,7 @@ class Solitaire:
         # While Loop (may becoeme infinite... use with cauition Must have good boundaries)
         while not self.game_over:
             if self.system_error:
+                print("Game LOST: No more available moves.")
                 break
             elif self.move_count >= self.max_moves:
                 print(f"Game Over: Reached maximum allowable number of moves: {self.max_moves}")
@@ -54,28 +55,79 @@ class Solitaire:
             print(f"\nGame {self.result} in {self.move_count} moves.")
             
     def greedy(self):
-        pass
-            
-    def random(self):
-        # 0a. Check Win Criteria
+        # Check Win Criteria
         game_win = self.check_win()
         if game_win:
             self.game_over = True
             self.result = "WON"
             return
         
-        # 0b. Check Loss Criteria
+        # Check Loss Criteria
         lost = self.check_loss()
         if lost:
             self.game_over = True
             self.result = "LOST"
             return
         
-        # 1a. Player checks if stockpile is empty. If yes, reset stockpile from wastepile
+        # Player checks if stockpile is empty. If yes, reset stockpile from wastepile
         self.reset_stockpile()
             
-        # 1b. King Check (check if a King can be placed into an empty tableau pile)
-        #self.king_check()
+        # King Check (check if a King can be placed into an empty tableau pile)
+        self.tableau_to_empty_move()
+        
+        # Check for general tableau swap as last chance
+        moved = self.tableau_to_tableau()
+        if moved:
+            return
+        
+        # Player checks if any top level tableau cards can go to foundation
+        moved = self.tableau_to_foundation()
+        if moved:
+            self.last_t2t = []
+            return
+        
+        #  Player checks stockpile to foundation placement
+        moved = self.stockpile_to_foundation()
+        if moved:
+            self.last_t2t = []
+            return       
+        
+        # Player checks if stockpile card can go to any upwards facing tableau cards
+        moved = self.stockpile_to_tableau()
+        if moved:
+            self.last_t2t = []
+            return
+        
+        # Place card in wastepile
+        moved = self.stockpile_to_wastepile()
+        if moved:
+            self.last_t2t = []
+            return
+    
+        # Debug Line
+        if True:
+            self.system_error = True
+            print('Stopping Play: Error in Card Placement')
+            
+    def random(self):
+        # Check Win Criteria
+        game_win = self.check_win()
+        if game_win:
+            self.game_over = True
+            self.result = "WON"
+            return
+        
+        # Check Loss Criteria
+        lost = self.check_loss()
+        if lost:
+            self.game_over = True
+            self.result = "LOST"
+            return
+        
+        # Player checks if stockpile is empty. If yes, reset stockpile from wastepile
+        self.reset_stockpile()
+            
+        # King Check (check if a King can be placed into an empty tableau pile)
         self.tableau_to_empty_move()
         
         # Create Methods List
@@ -110,82 +162,51 @@ class Solitaire:
         
         
     
-    def vibe(self):
-        '''
-        Returns
-        -------
-        out : TYPE
-            DESCRIPTION.
-
-
-        Logic Sequence (Foundation First -> Greedy)
-        1. Player checks if stockpile is empty
-            if yes, reset stockpile from waste
-            if no, go to 2
-        2. Player pulls card from stockpile, got to 3
-        3. Player checks foundation placement valid
-            if yes, place card in foundation, go to 1
-            if no, go to 4
-        4. Player checks tableau to foundation placement valid
-            if yes, place card into foundation, go to 1 
-            if no, go to 5
-        5. Player checks if any up facing cards allow stockpile card to place
-            if yes, 
-                if top card, place stockpile pile card, go to 1
-                if middle card, player checks if tableau pile can move to tableau pile for room
-                    if yes, move tableau pile, place stockile card, go to 1
-                    if no, go to 6,7
-        (MAYBE???) 6. Players checks if top of foundation can go to tableau & stockpile can go to moved card
-            if yes, move foundation to tableau, then stockpile to tableau, got to 1
-            if no, go to 7
-        7. Player places stockpile card into wastepile
-        
-        '''        
-        # 0a. Check Win Criteria
+    def vibe(self):   
+        # Check Win Criteria
         game_win = self.check_win()
         if game_win:
             self.game_over = True
             self.result = "WON"
             return
         
-        # 0b. Check Loss Criteria
+        # Check Loss Criteria
         lost = self.check_loss()
         if lost:
             self.game_over = True
             self.result = "LOST"
             return
         
-        # 1a. Player checks if stockpile is empty. If yes, reset stockpile from wastepile
+        # Player checks if stockpile is empty. If yes, reset stockpile from wastepile
         self.reset_stockpile()
             
-        # 1b. King Check (check if a King can be placed into an empty tableau pile)
-        #self.king_check()
+        # King Check (check if a King can be placed into an empty tableau pile)
         self.tableau_to_empty_move()
         
-        # 2. Player checks stockpile to foundation placement
+        # Player checks stockpile to foundation placement
         moved = self.stockpile_to_foundation()
         if moved:
             self.last_t2t = []
             return
         
-        # 3: Player checks if any top level tableau cards can go to foundation
+        # Player checks if any top level tableau cards can go to foundation
         moved = self.tableau_to_foundation()
         if moved:
             self.last_t2t = []
             return
         
-        # 4: Player checks if stockpile card can go to any upwards facing tableau cards
+        # Player checks if stockpile card can go to any upwards facing tableau cards
         moved = self.stockpile_to_tableau()
         if moved:
             self.last_t2t = []
             return
         
-        # 5: Check for general tableau swap as last chance
+        # Check for general tableau swap as last chance
         moved = self.tableau_to_tableau()
         if moved:
             return
         
-        # 6: Place card in wastepile
+        # Place card in wastepile
         moved = self.stockpile_to_wastepile()
         if moved:
             self.last_t2t = []
@@ -756,24 +777,38 @@ class Solitaire:
                 
                         if not valid_group:
                             continue
-                        
+                    
         if len(move_options)==0:
             return False
         
+        # Select highest card if two possible tableau-tableau moves are in the same column
         by_src_col = {}
         for tid, childID in move_options:
             src_col = self.deck[childID]['tableauID'][0]
             by_src_col.setdefault(src_col, []).append((tid, childID))
-    
         selected_candidates = []
         for src_col, matches in by_src_col.items():
             best_tid, best_childID = max(
                 matches, key=lambda pair: int(self.deck[pair[1]]['rank'])
             )
             selected_candidates.append([best_tid, best_childID])
-                
-
-        
+            
+        # Prioritize card where cards above are faced down
+        direction_priority = []
+        for sc in selected_candidates:
+            spid = sc[0]
+            scid = sc[1]
+            scol = int(self.deck[scid]['tableauID'][0])
+            srow = int(self.deck[scid]['tableauID'][1:])-1
+            cids = self.deck.keys()[self.deck.loc['tableauID']==f"{scol}{srow:02}"]
+            for n in cids:
+                if self.deck[n]['direction']=='down':
+                    direction_priority.append([spid, scid])       
+                        
+        # Replace selecetd candidates with priority                
+        if len(direction_priority)>0:
+            selected_candidates = direction_priority
+            
         # Determine random choice
         rng = np.random.default_rng()
         rng_idx = int(rng.integers(low=0, high=len(selected_candidates), size=1))
