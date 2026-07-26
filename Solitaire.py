@@ -5,7 +5,7 @@ class Solitaire:
     # This class is a simulated game of Solitaire
     
     def __init__(self,selected_seed):
-        self.strategy = 'greedy' # greedy, random, vibe
+        self.strategy = 'foundation_first' # greedy, random, foundation_first
         self.seed = selected_seed
         self.move_list = ['start']
         self.move_count = 0
@@ -41,8 +41,8 @@ class Solitaire:
                 break
             else:
                 match self.strategy:
-                    case 'vibe':
-                        self.vibe()
+                    case 'foundation_first':
+                        self.foundation_first()
                     case 'greedy':
                         self.greedy()
                     case 'random':
@@ -162,7 +162,7 @@ class Solitaire:
         
         
     
-    def vibe(self):   
+    def foundation_first(self):   
         # Check Win Criteria
         game_win = self.check_win()
         if game_win:
