@@ -4,7 +4,7 @@ import pandas as pd
 class Solitaire:
     # This class is a simulated game of Solitaire
     
-    def __init__(self,selected_seed):
+    def __init__(self):
         self.strategy = 'foundation_first' # greedy, random, foundation_first
         self.seed = 4
         self.move_list = ['start']
@@ -893,4 +893,4 @@ class Solitaire:
         
 # Direct code execution
 if __name__ == "__main__":
-    S = Solitaire(4)
+    S = Solitaire()
