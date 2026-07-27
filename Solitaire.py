@@ -6,7 +6,7 @@ class Solitaire:
     
     def __init__(self,selected_seed):
         self.strategy = 'foundation_first' # greedy, random, foundation_first
-        self.seed = selected_seed
+        self.seed = 4
         self.move_list = ['start']
         self.move_count = 0
         self.last_t2t = []
@@ -893,5 +893,4 @@ class Solitaire:
         
 # Direct code execution
 if __name__ == "__main__":
-    selected_seed = 4
-    S = Solitaire(selected_seed)
+    S = Solitaire(4)
