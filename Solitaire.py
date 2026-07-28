@@ -110,6 +110,7 @@ class Solitaire:
         # Debug Line
         if True:
             self.system_error = True
+            self.result = "LOST"
             print('Stopping Play: Error in Card Placement')
             
     def random(self):
@@ -161,6 +162,7 @@ class Solitaire:
         # Debug Line
         if True:
             self.system_error = True
+            self.result = "LOST"
             print('Stopping Play: Error in Card Placement')
         
         
@@ -218,6 +220,7 @@ class Solitaire:
         # Debug Line
         if True:
             self.system_error = True
+            self.result = "LOST"
             print('Stopping Play: Error in Card Placement')
             
     def generate_deck(self):
@@ -899,10 +902,10 @@ if __name__ == "__main__":
     # Setup up of initial variables for simulation runs, plan is to run
     # three different strategies back to back to back. Will store required
     # info and output as a table
-    S = Solitaire('greedy', 0)
-    S = Solitaire('greedy', 1)
-    S = Solitaire('greedy', 2)
-    # S = Solitaire('greedy', 2)
+    #S = Solitaire('greedy', 0)
+    #S = Solitaire('greedy', 1)
+    #S = Solitaire('greedy', 2)
+    S = Solitaire('foundation_first', 2)
     print(S.result)
     
     # n = 10
