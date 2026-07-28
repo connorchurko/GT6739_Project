@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import openpyxl
 
 class Solitaire:
     # This class is a simulated game of Solitaire
@@ -897,28 +898,37 @@ if __name__ == "__main__":
     # three different strategies back to back to back. Will store required
     # info and output as a table
     
-    n = 1000
+    n = 10
     winRate = 0
     movesToWin = 0
     strategies = ['greedy', 'foundation_first', 'random']
 
-    output_df = pd.DataFrame(columns = ['Strategy', 'winRate', 'avgMovesToWin'])
+    output_df = pd.DataFrame(columns = ['Strategy', 'winRate', 'avgMovesPerWin', 'avgMovesPerLoss'])
+
+    data_df = pd.DataFrame(columns = ['Seed', 'Strategy', 'Result', 'moveCount', 'moveList'])
+
 
     for strat in strategies:
         wins = 0
         losses = 0
-        moves = 0
+        moves_win = 0
+        moves_loss = 0
         for i in range(n):
             S = Solitaire(strat,i)
             if S.result == "WON":
                 wins += 1
-                moves = moves + S.move_count
+                moves_win = moves_win + S.move_count
             else:
                 losses += 1
+                moves_loss = moves_loss + S.move_count
+            data_df.loc[len(data_df)] = [S.seed, S.strategy, S.result, S.move_count, S.move_list]
 
         winRate = wins/n
-        avgMovesToWin = moves/wins
-        output_df.loc[len(output_df)] = [S.strategy, winRate, avgMovesToWin]          
+        avgMovesPerWin = moves_win/wins
+        avgMovesPerLoss = moves_loss/losses
+        output_df.loc[len(output_df)] = [S.strategy, winRate, avgMovesPerWin, avgMovesPerLoss]      
 
-    print(output_df)
+    with pd.ExcelWriter('SolitaireData.xlsx', engine='openpyxl') as writer:
+        data_df.to_excel(writer, sheet_name='Move Data', index=False)
+        output_df.to_excel(writer, sheet_name='Output Data', index=False)
     
