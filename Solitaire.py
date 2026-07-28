@@ -4,9 +4,9 @@ import pandas as pd
 class Solitaire:
     # This class is a simulated game of Solitaire
     
-    def __init__(self):
-        self.strategy = 'foundation_first' # greedy, random, foundation_first
-        self.seed = 4
+    def __init__(self, strategy_in, seed_in):
+        self.strategy = strategy_in # greedy, random, foundation_first
+        self.seed = seed_in
         self.move_list = ['start']
         self.move_count = 0
         self.last_t2t = []
@@ -893,4 +893,32 @@ class Solitaire:
         
 # Direct code execution
 if __name__ == "__main__":
-    S = Solitaire()
+    # Setup up of initial variables for simulation runs, plan is to run
+    # three different strategies back to back to back. Will store required
+    # info and output as a table
+    
+    n = 1000
+    winRate = 0
+    movesToWin = 0
+    strategies = ['greedy', 'foundation_first', 'random']
+
+    output_df = pd.DataFrame(columns = ['Strategy', 'winRate', 'avgMovesToWin'])
+
+    for strat in strategies:
+        wins = 0
+        losses = 0
+        moves = 0
+        for i in range(n):
+            S = Solitaire(strat,i)
+            if S.result == "WON":
+                wins += 1
+                moves = moves + S.move_count
+            else:
+                losses += 1
+
+        winRate = wins/n
+        avgMovesToWin = moves/wins
+        output_df.loc[len(output_df)] = [S.strategy, winRate, avgMovesToWin]          
+
+    print(output_df)
+    
