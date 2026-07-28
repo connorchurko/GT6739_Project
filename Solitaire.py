@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import openpyxl
 
+from collections import Counter
+
 class Solitaire:
     # This class is a simulated game of Solitaire
     
@@ -910,7 +912,7 @@ if __name__ == "__main__":
 
     # output_df = pd.DataFrame(columns = ['Strategy', 'wins', 'losses', 'winRate', 'avgMovesPerWin', 'avgMovesPerLoss'])
 
-    # data_df = pd.DataFrame(columns = ['Seed', 'Strategy', 'Result', 'moveCount', 'moveList'])
+    # data_df = pd.DataFrame(columns = ['Seed', 'Strategy', 'Result', 'moveCount', 't2t_count', 'tableau_count', 'waste_count', 'foundation_count', 'moveList'])
 
 
     # for strat in strategies:
@@ -926,14 +928,19 @@ if __name__ == "__main__":
     #         elif S.result == "LOST":
     #             losses += 1
     #             moves_loss = moves_loss + S.move_count
-    #         data_df.loc[len(data_df)] = [S.seed, S.strategy, S.result, S.move_count, S.move_list]
+    #         move_counts = Counter(S.move_list)
+    #         t2t_count = move_counts.get('tableau-tableau', 0)
+    #         tableau_count = move_counts.get('tableau', 0)
+    #         waste_count = move_counts.get('waste', 0)
+    #         foundation_count = move_counts.get('foundation', 0)
+    #         data_df.loc[len(data_df)] = [S.seed, S.strategy, S.result, S.move_count, t2t_count, tableau_count, waste_count, foundation_count, S.move_list]
 
     #     winRate = wins/n
     #     avgMovesPerWin = moves_win/wins
     #     avgMovesPerLoss = moves_loss/losses
-    #     output_df.loc[len(output_df)] = [S.strategy, winRate, avgMovesPerWin, avgMovesPerLoss]      
+    #     output_df.loc[len(output_df)] = [S.strategy, wins, losses, winRate, avgMovesPerWin, avgMovesPerLoss]      
 
-    # with pd.ExcelWriter('SolitaireData.xlsx', engine='openpyxl') as writer:
+    # with pd.ExcelWriter('Solitaire Data.xlsx', engine='openpyxl') as writer:
     #     data_df.to_excel(writer, sheet_name='Move Data', index=False)
     #     output_df.to_excel(writer, sheet_name='Output Data', index=False)
     
