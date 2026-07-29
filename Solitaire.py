@@ -902,48 +902,50 @@ if __name__ == "__main__":
     # Setup up of initial variables for simulation runs, plan is to run
     # three different strategies back to back to back. Will store required
     # info and output as a table
-    #S = Solitaire('greedy', 0)
-    #S = Solitaire('greedy', 1)
-    #S = Solitaire('greedy', 2)
-    S = Solitaire('foundation_first', 2)
-    print(S.result)
     
-    # n = 10
-    # winRate = 0
-    # movesToWin = 0
-    # strategies = ['greedy', 'foundation_first', 'random']
+    n = 1000
+    winRate = 0
+    movesToWin = 0
+    strategies = ['greedy', 'foundation_first', 'random']
 
-    # output_df = pd.DataFrame(columns = ['Strategy', 'wins', 'losses', 'winRate', 'avgMovesPerWin', 'avgMovesPerLoss'])
+    output_df = pd.DataFrame(columns = ['Strategy', 'wins', 'losses', 'winRate', 'avgMovesPerWin', 'move_std_Dev', 'avgMovesPerLoss'])
 
-    # data_df = pd.DataFrame(columns = ['Seed', 'Strategy', 'Result', 'moveCount', 't2t_count', 'tableau_count', 'waste_count', 'foundation_count', 'moveList'])
+    data_df = pd.DataFrame(columns = ['Seed', 'Strategy', 'Result', 'moveCount', 't2t_count', 'tableau_count', 'waste_count', 'foundation_count', 'moveList'])
 
 
-    # for strat in strategies:
-    #     wins = 0
-    #     losses = 0
-    #     moves_win = 0
-    #     moves_loss = 0
-    #     for i in range(n):
-    #         S = Solitaire(strat,i)
-    #         if S.result == "WON":
-    #             wins += 1
-    #             moves_win = moves_win + S.move_count
-    #         elif S.result == "LOST":
-    #             losses += 1
-    #             moves_loss = moves_loss + S.move_count
-    #         move_counts = Counter(S.move_list)
-    #         t2t_count = move_counts.get('tableau-tableau', 0)
-    #         tableau_count = move_counts.get('tableau', 0)
-    #         waste_count = move_counts.get('waste', 0)
-    #         foundation_count = move_counts.get('foundation', 0)
-    #         data_df.loc[len(data_df)] = [S.seed, S.strategy, S.result, S.move_count, t2t_count, tableau_count, waste_count, foundation_count, S.move_list]
+    for strat in strategies:
+        wins = 0
+        losses = 0
+        moves_win = 0
+        moves_loss = 0
+        for i in range(n):
+            S = Solitaire(strat,i)
+            if S.result == "WON":
+                wins += 1
+                moves_win = moves_win + S.move_count
+            elif S.result == "LOST":
+                losses += 1
+                moves_loss = moves_loss + S.move_count
+            move_counts = Counter(S.move_list)
+            t2t_count = move_counts.get('tableau-tableau', 0)
+            tableau_count = move_counts.get('tableau', 0)
+            waste_count = move_counts.get('waste', 0)
+            foundation_count = move_counts.get('foundation', 0)
+            data_df.loc[len(data_df)] = [S.seed, S.strategy, S.result, S.move_count, t2t_count, tableau_count, waste_count, foundation_count, S.move_list]
 
-    #     winRate = wins/n
-    #     avgMovesPerWin = moves_win/wins
-    #     avgMovesPerLoss = moves_loss/losses
-    #     output_df.loc[len(output_df)] = [S.strategy, wins, losses, winRate, avgMovesPerWin, avgMovesPerLoss]      
+        # Adding a catch statement if there are somehow zero wins (for random strat)
+        if wins == 0:
+            avgMovesPerWin = 0
+        else:
+            avgMovesPerWin = moves_win/wins
+        winRate = wins/n
 
-    # with pd.ExcelWriter('Solitaire Data.xlsx', engine='openpyxl') as writer:
-    #     data_df.to_excel(writer, sheet_name='Move Data', index=False)
-    #     output_df.to_excel(writer, sheet_name='Output Data', index=False)
+        avgMovesPerLoss = moves_loss/losses
+        move_count_arr = np.array(data_df.loc[data_df['Strategy'] == strat, 'moveCount'].tolist())
+        move_std_dev = np.std(move_count_arr)
+        output_df.loc[len(output_df)] = [S.strategy, wins, losses, winRate, avgMovesPerWin, move_std_dev, avgMovesPerLoss]      
+
+    with pd.ExcelWriter('Solitaire Data.xlsx', engine='openpyxl') as writer:
+        data_df.to_excel(writer, sheet_name='Move Data', index=False)
+        output_df.to_excel(writer, sheet_name='Output Data', index=False)
     
