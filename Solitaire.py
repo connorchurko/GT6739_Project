@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import openpyxl
+import time
 
 from collections import Counter
 
@@ -18,10 +19,14 @@ class Solitaire:
         self.SWflag = False
         self.system_error = False
         self.max_moves = 500
+        self.game_duration = 0
         
         # Begin Game
         self.initiate_solitaire_board()
+        start_time = time.perf_counter()
         self.player()
+        end_time = time.perf_counter()
+        self.game_duration = end_time-start_time
         
     def player(self):
         # Function acts like a player choosing strategy, making moves, and evalutaing ending criteria
@@ -944,7 +949,7 @@ if __name__ == "__main__":
         avgMovesPerLoss = moves_loss/losses
         move_count_arr = np.array(data_df.loc[data_df['Strategy'] == strat, 'moveCount'].tolist())
         move_std_dev = np.std(move_count_arr)
-        output_df.loc[len(output_df)] = [S.strategy, wins, losses, winRate, avgMovesPerWin, move_std_dev, avgMovesPerLoss]      
+        output_df.loc[len(output_df)] = [S.strategy, wins, losses, winRate, avgMovesPerWin, move_std_dev, avgMovesPerLoss,S.game_duration]      
 
     with pd.ExcelWriter('Solitaire Data.xlsx', engine='openpyxl') as writer:
         data_df.to_excel(writer, sheet_name='Move Data', index=False)
