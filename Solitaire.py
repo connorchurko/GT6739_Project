@@ -17,7 +17,7 @@ class Solitaire:
         self.result = 'ACTIVE'
         self.SWflag = False
         self.system_error = False
-        self.max_moves = 300
+        self.max_moves = 500
         
         # Begin Game
         self.initiate_solitaire_board()
