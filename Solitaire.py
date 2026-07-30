@@ -40,6 +40,7 @@ class Solitaire:
                 print("Game LOST: No more available moves.")
                 break
             elif self.move_count >= self.max_moves:
+                self.result = 'LOST'
                 print(f"Game Over: Reached maximum allowable number of moves: {self.max_moves}")
                 break
             else:
