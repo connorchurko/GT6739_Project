@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import openpyxl
 import time
-
+import argparse
 from collections import Counter
 
 class Solitaire:
@@ -900,24 +900,35 @@ class Solitaire:
         if num_resets+num_waste+num_tab2tab==len(move_subset):
             loss = True
             #print("GAME LOST")
-        return loss       
-                
+        return loss 
+
         
-# Direct code execution
-if __name__ == "__main__":
+def main():
+    # Initialize the argument parser
+    parser = argparse.ArgumentParser(
+        description="A script that processes the game startegy and seed input."
+    )
+    parser.add_argument("-t", "--strategy", type=str, default="foundation_first", help="Game Strategy (default: 'foundation_first'). Options = 'greedy','foundation_first','random','all'.")
+    parser.add_argument("-s", "--seed", type=int, default="1", help="Game Seed (default: 1)")
+    args = parser.parse_args()
+    print(f"Starting game using {args.strategy} strategy with seed {args.seed}!")
+    
+    
     # Setup up of initial variables for simulation runs, plan is to run
     # three different strategies back to back to back. Will store required
     # info and output as a table
-    
-    n = 1000
+    n = [args.seed]
+    if args.seed==9999:
+        n = [int(i) for i in np.linspace(0,999,1000)]
     winRate = 0
     movesToWin = 0
-    strategies = ['greedy', 'foundation_first', 'random']
-
+    
+    strategies = [args.strategy]
+    if args.strategy=='all':
+        strategies = ['greedy', 'foundation_first', 'random']
+          
     output_df = pd.DataFrame(columns = ['Strategy', 'wins', 'losses', 'winRate', 'avgMovesPerWin', 'move_std_Dev', 'avgMovesPerLoss', 'average_game_duration', 'avg_duration_win', 'avg_duration_loss'])
-
     data_df = pd.DataFrame(columns = ['Seed', 'Strategy', 'Result', 'moveCount', 't2t_count', 'tableau_count', 'waste_count', 'foundation_count', 'game_duration', 'moveList'])
-
 
     for strat in strategies:
         wins = 0
@@ -928,7 +939,7 @@ if __name__ == "__main__":
         game_duration_loss = 0
         total_game_duration = 0
 
-        for i in range(n):
+        for i in n:
             S = Solitaire(strat,i)
             if S.result == "WON":
                 wins += 1
@@ -954,18 +965,28 @@ if __name__ == "__main__":
             avgMovesPerWin = 0
         else:
             avgMovesPerWin = moves_win/wins
-        winRate = wins/n
+        winRate = wins/len(n)
 
-        avgMovesPerLoss = moves_loss/losses
         move_count_arr = np.array(data_df.loc[data_df['Strategy'] == strat, 'moveCount'].tolist())
         move_std_dev = np.std(move_count_arr)
-        avg_game_duration = total_game_duration/n
-        avg_game_win_duration = game_duration_win/wins
-        avg_game_loss_duration = game_duration_loss/losses
+        avg_game_duration = total_game_duration/len(n)
+        avg_game_win_duration = game_duration_win
+        if wins>0:
+            avg_game_win_duration = game_duration_win/wins
+            
+        avg_game_loss_duration = game_duration_loss
+        avgMovesPerLoss = moves_loss
+        if losses>0:
+            avg_game_loss_duration = game_duration_loss/losses
+            avgMovesPerLoss = moves_loss/losses
 
         output_df.loc[len(output_df)] = [S.strategy, wins, losses, winRate, avgMovesPerWin, move_std_dev, avgMovesPerLoss, avg_game_duration, avg_game_win_duration, avg_game_loss_duration]      
 
     with pd.ExcelWriter('Solitaire Data.xlsx', engine='openpyxl') as writer:
         data_df.to_excel(writer, sheet_name='Move Data', index=False)
-        output_df.to_excel(writer, sheet_name='Output Data', index=False)
+        output_df.to_excel(writer, sheet_name='Output Data', index=False)              
+        
+# Direct code execution
+if __name__ == "__main__":
+    main()
     
