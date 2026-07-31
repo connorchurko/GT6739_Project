@@ -45,7 +45,6 @@ class Solitaire:
                 print("Game LOST: No more available moves.")
                 break
             elif self.move_count >= self.max_moves:
-                self.result = 'LOST'
                 print(f"Game Over: Reached maximum allowable number of moves: {self.max_moves}")
                 break
             else:
@@ -882,7 +881,7 @@ class Solitaire:
         # consists on tableau-tableau moves or wastepile moves, then lose.
         loss = False
         
-        if self.move_count >= 300:
+        if self.move_count >= self.max_moves:
             return True
         
         # Index of second to last reset
