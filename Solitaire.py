@@ -919,15 +919,19 @@ def main():
     n = [args.seed]
     if args.seed==9999:
         n = [int(i) for i in np.linspace(0,999,1000)]
+        output_df = pd.DataFrame(columns = ['Strategy', 'wins', 'losses', 'winRate', 'avgMovesPerWin', 'move_std_Dev', 'avgMovesPerLoss', 'average_game_duration', 'avg_duration_win', 'avg_duration_loss'])
+        data_df = pd.DataFrame(columns = ['Seed', 'Strategy', 'Result', 'moveCount', 't2t_count', 'tableau_count', 'waste_count', 'foundation_count', 'game_duration', 'moveList'])
+    elif args.seed==-9999:
+        n = [int(i) for i in np.linspace(0,4,5)]
+        output_df = pd.DataFrame(columns = ['Total_Loops', 'Strategy', 'wins', 'losses', 'winRate', 'avgMovesPerWin', 'move_std_Dev', 'avgMovesPerLoss', 'average_game_duration', 'avg_duration_win', 'avg_duration_loss'])
+        data_df = pd.DataFrame(columns = ['Loop_Number', 'Seed', 'Strategy', 'Result', 'moveCount', 't2t_count', 'tableau_count', 'waste_count', 'foundation_count', 'game_duration', 'moveList'])
     winRate = 0
-    movesToWin = 0
     
     strategies = [args.strategy]
     if args.strategy=='all':
         strategies = ['greedy', 'foundation_first', 'random']
           
-    output_df = pd.DataFrame(columns = ['Strategy', 'wins', 'losses', 'winRate', 'avgMovesPerWin', 'move_std_Dev', 'avgMovesPerLoss', 'average_game_duration', 'avg_duration_win', 'avg_duration_loss'])
-    data_df = pd.DataFrame(columns = ['Seed', 'Strategy', 'Result', 'moveCount', 't2t_count', 'tableau_count', 'waste_count', 'foundation_count', 'game_duration', 'moveList'])
+   
 
     for strat in strategies:
         wins = 0
@@ -938,52 +942,86 @@ def main():
         game_duration_loss = 0
         total_game_duration = 0
 
-        for i in n:
-            S = Solitaire(strat,i)
-            if S.result == "WON":
-                wins += 1
-                moves_win = moves_win + S.move_count
-                game_duration_win = game_duration_win + S.game_duration
-            elif S.result == "LOST":
-                losses += 1
-                moves_loss = moves_loss + S.move_count
-                game_duration_loss = game_duration_loss + S.game_duration
+        if args.seed!=-9999:
+            for i in n:
+                S = Solitaire(strat,i)
+                if S.result == "WON":
+                    wins += 1
+                    moves_win = moves_win + S.move_count
+                    game_duration_win = game_duration_win + S.game_duration
+                elif S.result == "LOST":
+                    losses += 1
+                    moves_loss = moves_loss + S.move_count
+                    game_duration_loss = game_duration_loss + S.game_duration
 
-            move_counts = Counter(S.move_list)
-            t2t_count = move_counts.get('tableau-tableau', 0)
-            tableau_count = move_counts.get('tableau', 0)
-            waste_count = move_counts.get('waste', 0)
-            foundation_count = move_counts.get('foundation', 0)
-            total_game_duration = S.game_duration + total_game_duration
+                move_counts = Counter(S.move_list)
+                t2t_count = move_counts.get('tableau-tableau', 0)
+                tableau_count = move_counts.get('tableau', 0)
+                waste_count = move_counts.get('waste', 0)
+                foundation_count = move_counts.get('foundation', 0)
+                total_game_duration = S.game_duration + total_game_duration
 
 
-            data_df.loc[len(data_df)] = [S.seed, S.strategy, S.result, S.move_count, t2t_count, tableau_count, waste_count, foundation_count, S.game_duration, S.move_list]
+                data_df.loc[len(data_df)] = [S.seed, S.strategy, S.result, S.move_count, t2t_count, tableau_count, waste_count, foundation_count, S.game_duration, S.move_list]
 
-        # Adding a catch statement if there are somehow zero wins (for random strat)
-        if wins == 0:
-            avgMovesPerWin = 0
+            # Adding a catch statement if there are somehow zero wins (for random strat)
+            if wins == 0:
+                avgMovesPerWin = 0
+            else:
+                avgMovesPerWin = moves_win/wins
+            winRate = wins/len(n)
+
+            move_count_arr = np.array(data_df.loc[data_df['Strategy'] == strat, 'moveCount'].tolist())
+            move_std_dev = np.std(move_count_arr)
+            avg_game_duration = total_game_duration/len(n)
+            avg_game_win_duration = game_duration_win
+            if wins>0:
+                avg_game_win_duration = game_duration_win/wins
+
+            avg_game_loss_duration = game_duration_loss
+            avgMovesPerLoss = moves_loss
+            if losses>0:
+                avg_game_loss_duration = game_duration_loss/losses
+                avgMovesPerLoss = moves_loss/losses
+
+            output_df.loc[len(output_df)] = [S.strategy, wins, losses, winRate, avgMovesPerWin, move_std_dev, avgMovesPerLoss, avg_game_duration, avg_game_win_duration, avg_game_loss_duration]      
         else:
-            avgMovesPerWin = moves_win/wins
-        winRate = wins/len(n)
-
-        move_count_arr = np.array(data_df.loc[data_df['Strategy'] == strat, 'moveCount'].tolist())
-        move_std_dev = np.std(move_count_arr)
-        avg_game_duration = total_game_duration/len(n)
-        avg_game_win_duration = game_duration_win
-        if wins>0:
-            avg_game_win_duration = game_duration_win/wins
-            
-        avg_game_loss_duration = game_duration_loss
-        avgMovesPerLoss = moves_loss
-        if losses>0:
-            avg_game_loss_duration = game_duration_loss/losses
-            avgMovesPerLoss = moves_loss/losses
-
-        output_df.loc[len(output_df)] = [S.strategy, wins, losses, winRate, avgMovesPerWin, move_std_dev, avgMovesPerLoss, avg_game_duration, avg_game_win_duration, avg_game_loss_duration]      
-
-    with pd.ExcelWriter('Solitaire Data.xlsx', engine='openpyxl') as writer:
-        data_df.to_excel(writer, sheet_name='Move Data', index=False)
-        output_df.to_excel(writer, sheet_name='Output Data', index=False)              
+            wins = 0
+            losses = 0
+            moves_win = 0
+            moves_loss = 0
+            game_duration_win = 0
+            game_duration_loss = 0
+            total_game_duration = 0
+            loops = 100
+            for x in range(loops):
+                for y in n:
+                    S = Solitaire(strat,y)
+                    if S.result == "WON":
+                        wins += 1
+                        moves_win = moves_win + S.move_count
+                        game_duration_win = game_duration_win + S.game_duration
+                    elif S.result == "LOST":
+                        losses += 1
+                        moves_loss = moves_loss + S.move_count
+                        game_duration_loss = game_duration_loss + S.game_duration
+                    
+                    move_counts = Counter(S.move_list)
+                    t2t_count = move_counts.get('tableau-tableau', 0)
+                    tableau_count = move_counts.get('tableau', 0)
+                    waste_count = move_counts.get('waste', 0)
+                    foundation_count = move_counts.get('foundation', 0)
+                    total_game_duration = S.game_duration + total_game_duration
+    
+                    data_df.loc[len(data_df)] = [x, S.seed, S.strategy, S.result, S.move_count, t2t_count, tableau_count, waste_count, foundation_count, S.game_duration, S.move_list]
+                    
+    if args.seed!=-9999:
+        with pd.ExcelWriter('Solitaire Data.xlsx', engine='openpyxl') as writer:
+            data_df.to_excel(writer, sheet_name='Move Data', index=False)
+            output_df.to_excel(writer, sheet_name='Output Data', index=False)
+    else:
+        with pd.ExcelWriter('Solitaire Variance Data.xlsx', engine='openpyxl') as writer:
+            data_df.to_excel(writer, sheet_name='Move Data', index=False)            
         
 # Direct code execution
 if __name__ == "__main__":
