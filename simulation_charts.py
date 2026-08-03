@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[27]:
+# In[72]:
 
 
 import numpy as np
@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 
 
-# In[28]:
+# In[73]:
 
 
 ## Loading in the dataframes from the simulation data
@@ -23,7 +23,7 @@ output_500_df = pd.read_excel('../Solitaire Data Test 6 500 Limit.xlsx', sheet_n
 var_df = pd.read_excel('../Solitaire Variance Data.xlsx', sheet_name='Move Data')
 
 
-# In[29]:
+# In[74]:
 
 
 results = ['WON', 'LOST']
@@ -32,7 +32,7 @@ strat_labels = ['Foundation First', 'Greedy', 'Random']
 move_limits = [300, 500]
 
 
-# In[30]:
+# In[75]:
 
 
 # 1: Histogram for each strategy and move limit for total move count, with dashed line showing the average - wins and losses
@@ -71,20 +71,20 @@ for result in results:
 
             plt.hist(move_data, bins=32, color='skyblue', edgecolor='black')
             plt.title(f'Histogram of Total Moves per Game: {strat_name}\nResult: {result}, Number of Games: {n}', fontweight='bold')
-            plt.xlabel('Total Moves to Win', fontweight='bold')
+            plt.xlabel('Total Moves', fontweight='bold')
             plt.ylabel('Frequency', fontweight='bold')
 
             plt.gca().set_axisbelow(True)
             plt.grid(axis='both', linestyle='-', color='lightgray', linewidth=0.7, alpha=0.6)
 
-            plt.axvline(x=avg_moves, color='red', linestyle='--', linewidth=2, label=f'Average Moves to Win: {avg_moves:.2f}')
+            plt.axvline(x=avg_moves, color='red', linestyle='--', linewidth=2, label=f'Average Moves to Win: {avg_moves:.0f}')
             plt.legend(edgecolor='gray', framealpha=0.5)
 
             plt.savefig(output_file, dpi=300, bbox_inches="tight", transparent=False)
             plt.close()
 
 
-# In[31]:
+# In[76]:
 
 
 # 2: Histogram for each strategy for each move type, show average with a dashed line - wins
@@ -120,7 +120,7 @@ for result in results:
             strat_name = strat_labels[index]
 
             plt.bar(chart_xlabel, move_averages, color='skyblue', edgecolor='black', width=0.6)
-            plt.title(f'Individual Move Type Averages for all ({n}) games {result}: {strat_name}', fontweight='bold')
+            plt.title(f'Individual Move Type Averages for all ({n}) Games {result}: {strat_name}', fontweight='bold')
             plt.xlabel('Move Type', fontweight='bold')
             plt.ylabel('Average Moves per Game', fontweight='bold')
 
@@ -131,7 +131,7 @@ for result in results:
             plt.close()
 
 
-# In[32]:
+# In[77]:
 
 
 # 3: Histogram showing time distribution for each strategy - wins and losses
@@ -169,21 +169,21 @@ for result in results:
             fig, ax = plt.subplots()
 
             plt.hist(move_data, bins=32, color='skyblue', edgecolor='black')
-            plt.title(f'Histogram of Game Duration for Games {result}: {strat_name}\nNumber of games: {n}', fontweight='bold')
+            plt.title(f'Histogram of Game Duration for Games {result}: {strat_name}\nNumber of Games: {n}', fontweight='bold')
             plt.xlabel('Game Duration (seconds)', fontweight='bold')
             plt.ylabel('Frequency', fontweight='bold')
 
             plt.gca().set_axisbelow(True)
             plt.grid(axis='both', linestyle='-', color='lightgray', linewidth=0.7, alpha=0.6)
 
-            plt.axvline(x=avg_moves, color='red', linestyle='--', linewidth=2, label=f'Average Time: {avg_moves:.2f}')
+            plt.axvline(x=avg_moves, color='red', linestyle='--', linewidth=2, label=f'Average Time: {avg_moves:.0f}')
             plt.legend(edgecolor='gray', framealpha=0.5)
 
             plt.savefig(output_file, dpi=300, bbox_inches="tight", transparent=False)
             plt.close()
 
 
-# In[50]:
+# In[81]:
 
 
 # 4: Bar Chart showing average time comparison for each strategy
@@ -205,6 +205,9 @@ for result in results:
             median_ff = game_300_df.loc[(game_300_df['Strategy'] == 'foundation_first') & (game_300_df['Result'] == result), 'game_duration'].median()
             median_gr = game_300_df.loc[(game_300_df['Strategy'] == 'greedy') & (game_300_df['Result'] == result), 'game_duration'].median()
             median_rnd = game_300_df.loc[(game_300_df['Strategy'] == 'random') & (game_300_df['Result'] == result), 'game_duration'].median()
+            std_ff = game_300_df.loc[(game_300_df['Strategy'] == 'foundation_first') & (game_300_df['Result'] == result), 'game_duration'].std()
+            std_gr = game_300_df.loc[(game_300_df['Strategy'] == 'greedy') & (game_300_df['Result'] == result), 'game_duration'].std()
+            std_rnd = game_300_df.loc[(game_300_df['Strategy'] == 'random') & (game_300_df['Result'] == result), 'game_duration'].std()
             wins = output_300_df['wins'].sum()
             losses = output_300_df['losses'].sum()
         elif (move_limit == 500):
@@ -217,21 +220,29 @@ for result in results:
             median_ff = game_500_df.loc[(game_500_df['Strategy'] == 'foundation_first') & (game_500_df['Result'] == result), 'game_duration'].median()
             median_gr = game_500_df.loc[(game_500_df['Strategy'] == 'greedy') & (game_500_df['Result'] == result), 'game_duration'].median()
             median_rnd = game_500_df.loc[(game_500_df['Strategy'] == 'random') & (game_500_df['Result'] == result), 'game_duration'].median()
+            std_ff = game_500_df.loc[(game_500_df['Strategy'] == 'foundation_first') & (game_500_df['Result'] == result), 'game_duration'].std()
+            std_gr = game_500_df.loc[(game_500_df['Strategy'] == 'greedy') & (game_500_df['Result'] == result), 'game_duration'].std()
+            std_rnd = game_500_df.loc[(game_500_df['Strategy'] == 'random') & (game_500_df['Result'] == result), 'game_duration'].std()
             wins = output_500_df['wins'].sum()
             losses = output_500_df['losses'].sum()
 
         if result == 'WON':
-            time_avg = [avg_t_ff_w, avg_t_gr_w, avg_t_rnd_w]
+            time_avg = np.array([avg_t_ff_w, avg_t_gr_w, avg_t_rnd_w])
             n = wins
         elif result == 'LOST':
-            time_avg = [avg_t_ff_l, avg_t_gr_l, avg_t_rnd_l]
+            time_avg = np.array([avg_t_ff_l, avg_t_gr_l, avg_t_rnd_l])
             n = losses
 
         median_data = [median_ff, median_gr, median_rnd]
+        std_data_pos = time_avg + np.array([std_ff, std_gr, std_rnd])
+        std_data_neg = time_avg - np.array([std_ff, std_gr, std_rnd])
 
-        plt.bar(strat_labels, time_avg, color='skyblue', edgecolor='black', width=0.6, label='Average Time')
+        plt.bar(strat_labels, time_avg, color='skyblue', edgecolor='black', width=0.6)
         plt.scatter(strat_labels,median_data, color='red', marker='D', s=100, zorder=3, label='Median Time')
-        plt.title(f'Average Time for {n}/3000 games {result}', fontweight='bold')
+        plt.scatter(strat_labels, std_data_pos, color='green', marker='v', s=100, zorder=3, label='σ Above')
+        plt.scatter(strat_labels, std_data_neg, color='green', marker='^', s=100, zorder=3, label='σ Below')
+        plt.scatter(strat_labels, time_avg, color='blue', marker='*', s=100, zorder=3, label='Average Time')
+        plt.title(f'Time for {n}/3000 Games {result}', fontweight='bold')
         plt.xlabel('Strategies', fontweight='bold')
         plt.ylabel('Time per Game (seconds)', fontweight='bold')
         plt.gca().set_axisbelow(True)
@@ -241,7 +252,7 @@ for result in results:
         plt.close()
 
 
-# In[44]:
+# In[79]:
 
 
 # 5: Show variance in moves for the same 5 seeds ran like 100 times
