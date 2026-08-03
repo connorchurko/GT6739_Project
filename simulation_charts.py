@@ -4,9 +4,9 @@
 # In[72]:
 
 
-import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt
+import numpy as np # version: 2.5.0
+import pandas as pd # version: 3.0.3
+import matplotlib.pyplot as plt # version: 3.11.1
 from pathlib import Path
 
 
